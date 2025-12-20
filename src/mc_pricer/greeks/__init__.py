@@ -1,0 +1,3 @@
+"""
+Greeks package initialization.
+"""

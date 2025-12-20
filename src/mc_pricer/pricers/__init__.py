@@ -1,0 +1,3 @@
+"""
+Pricers package initialization.
+"""
