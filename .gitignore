@@ -15,6 +15,9 @@ env/
 # Windows / accidental binaries
 *.exe
 
+# Generated plots
+plots/
+
 # Distribution / packaging
 .Python
 build/
