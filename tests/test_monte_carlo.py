@@ -144,3 +144,89 @@ class TestMonteCarloEngine:
         assert len(payoffs) == 1000
         assert result.price == np.mean(payoffs)
         assert np.all(payoffs >= 0)
+
+    def test_control_variate_reduces_variance(self):
+        """Test that control variate reduces standard error."""
+        S0, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
+        n_paths = 50000
+        seed = 42
+
+        # Plain MC
+        model_plain = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
+        payoff = EuropeanCallPayoff(strike=K)
+        engine_plain = MonteCarloEngine(
+            model=model_plain, payoff=payoff, n_paths=n_paths, seed=seed
+        )
+        result_plain = engine_plain.price()
+
+        # Control variate MC
+        model_cv = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
+        engine_cv = MonteCarloEngine(
+            model=model_cv, payoff=payoff, n_paths=n_paths,
+            control_variate=True, seed=seed
+        )
+        result_cv = engine_cv.price()
+
+        # Control variate should reduce standard error
+        assert result_cv.stderr <= result_plain.stderr + 1e-12
+
+        # Beta should be computed and stored
+        assert result_cv.control_variate_beta is not None
+
+    def test_control_variate_preserves_mean(self):
+        """Test that control variate preserves expected price."""
+        S0, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
+        n_paths = 100000
+        seed = 42
+
+        # Plain MC
+        model_plain = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
+        payoff = EuropeanCallPayoff(strike=K)
+        engine_plain = MonteCarloEngine(
+            model=model_plain, payoff=payoff, n_paths=n_paths, seed=seed
+        )
+        result_plain = engine_plain.price()
+
+        # Control variate MC
+        model_cv = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
+        engine_cv = MonteCarloEngine(
+            model=model_cv, payoff=payoff, n_paths=n_paths,
+            control_variate=True, seed=seed
+        )
+        result_cv = engine_cv.price()
+
+        # Prices should be close (within 5 standard errors)
+        diff = abs(result_cv.price - result_plain.price)
+        max_diff = 5 * max(result_cv.stderr, result_plain.stderr)
+        assert diff < max_diff
+
+    def test_control_variate_with_antithetic(self):
+        """Test that control variate works with antithetic variates."""
+        S0, K, r, sigma, T = 100, 100, 0.05, 0.2, 1.0
+        n_paths = 50000
+        seed = 42
+
+        # Combined variance reduction
+        model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
+        payoff = EuropeanCallPayoff(strike=K)
+        engine = MonteCarloEngine(
+            model=model, payoff=payoff, n_paths=n_paths,
+            antithetic=True, control_variate=True, seed=seed
+        )
+        result = engine.price()
+
+        # Should have positive price and beta
+        assert result.price > 0
+        assert result.control_variate_beta is not None
+
+    def test_control_variate_beta_none_when_disabled(self):
+        """Test that beta is None when control variate is not used."""
+        model = GeometricBrownianMotion(S0=100, r=0.05, sigma=0.2, T=1.0, seed=42)
+        payoff = EuropeanCallPayoff(strike=100)
+        engine = MonteCarloEngine(
+            model=model, payoff=payoff, n_paths=10000, control_variate=False
+        )
+        result = engine.price()
+
+        assert result.control_variate_beta is None
+

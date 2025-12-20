@@ -27,22 +27,28 @@ class PricingResult:
         Upper bound of 95% confidence interval
     n_paths : int
         Number of simulation paths used
+    control_variate_beta : float | None
+        Beta coefficient used in control variate adjustment (None if not used)
     """
     price: float
     stderr: float
     ci_lower: float
     ci_upper: float
     n_paths: int
+    control_variate_beta: float | None = None
 
     def __repr__(self) -> str:
-        return (
+        base = (
             f"PricingResult(\n"
             f"  price={self.price:.6f},\n"
             f"  stderr={self.stderr:.6f},\n"
             f"  CI95=[{self.ci_lower:.6f}, {self.ci_upper:.6f}],\n"
-            f"  n_paths={self.n_paths}\n"
-            f")"
+            f"  n_paths={self.n_paths}"
         )
+        if self.control_variate_beta is not None:
+            base += f",\n  control_variate_beta={self.control_variate_beta:.6f}"
+        base += "\n)"
+        return base
 
 
 class MonteCarloEngine:
@@ -56,6 +62,7 @@ class MonteCarloEngine:
         payoff: Callable[[np.ndarray], np.ndarray],
         n_paths: int,
         antithetic: bool = False,
+        control_variate: bool = False,
         seed: int | None = None
     ):
         """
@@ -71,6 +78,8 @@ class MonteCarloEngine:
             Number of Monte Carlo paths
         antithetic : bool, optional
             Use antithetic variates for variance reduction
+        control_variate : bool, optional
+            Use control variate variance reduction with S_T as control
         seed : int, optional
             Random seed (if not set, uses model's RNG)
         """
@@ -81,6 +90,7 @@ class MonteCarloEngine:
         self.payoff = payoff
         self.n_paths = n_paths
         self.antithetic = antithetic
+        self.control_variate = control_variate
 
         # Override model's RNG if seed is provided
         if seed is not None:
@@ -108,6 +118,25 @@ class MonteCarloEngine:
         discount_factor = np.exp(-self.model.r * self.model.T)
         discounted_payoffs = discount_factor * payoffs
 
+        # Control variate adjustment
+        beta = None
+        if self.control_variate:
+            # X = discounted payoffs, Y = discounted terminal prices
+            X = discounted_payoffs
+            Y = discount_factor * S_T
+            # Known expectation: E[Y] = S0 (under risk-neutral measure)
+            expected_Y = self.model.S0
+
+            # Compute covariance and variance
+            cov_XY = np.cov(X, Y, ddof=1)[0, 1]
+            var_Y = np.var(Y, ddof=1)
+
+            # Compute optimal beta coefficient
+            if var_Y > 1e-14:
+                beta = cov_XY / var_Y
+                # Apply control variate adjustment
+                discounted_payoffs = X - beta * (Y - expected_Y)
+
         # Compute statistics
         price = np.mean(discounted_payoffs)
         stderr = np.std(discounted_payoffs, ddof=1) / np.sqrt(self.n_paths)
@@ -122,7 +151,8 @@ class MonteCarloEngine:
             stderr=stderr,
             ci_lower=ci_lower,
             ci_upper=ci_upper,
-            n_paths=self.n_paths
+            n_paths=self.n_paths,
+            control_variate_beta=beta
         )
 
     def price_with_details(self) -> tuple[PricingResult, np.ndarray]:
@@ -149,6 +179,25 @@ class MonteCarloEngine:
         discount_factor = np.exp(-self.model.r * self.model.T)
         discounted_payoffs = discount_factor * payoffs
 
+        # Control variate adjustment
+        beta = None
+        if self.control_variate:
+            # X = discounted payoffs, Y = discounted terminal prices
+            X = discounted_payoffs
+            Y = discount_factor * S_T
+            # Known expectation: E[Y] = S0 (under risk-neutral measure)
+            expected_Y = self.model.S0
+
+            # Compute covariance and variance
+            cov_XY = np.cov(X, Y, ddof=1)[0, 1]
+            var_Y = np.var(Y, ddof=1)
+
+            # Compute optimal beta coefficient
+            if var_Y > 1e-14:
+                beta = cov_XY / var_Y
+                # Apply control variate adjustment
+                discounted_payoffs = X - beta * (Y - expected_Y)
+
         # Compute statistics
         price = np.mean(discounted_payoffs)
         stderr = np.std(discounted_payoffs, ddof=1) / np.sqrt(self.n_paths)
@@ -163,7 +212,8 @@ class MonteCarloEngine:
             stderr=stderr,
             ci_lower=ci_lower,
             ci_upper=ci_upper,
-            n_paths=self.n_paths
+            n_paths=self.n_paths,
+            control_variate_beta=beta
         )
 
         return result, discounted_payoffs

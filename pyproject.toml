@@ -48,6 +48,7 @@ ignore = []
 "tests/**/*.py" = ["N802", "N803", "N806"]
 "src/mc_pricer/models/gbm.py" = ["N803", "N806"]
 "src/mc_pricer/pricers/monte_carlo.py" = ["N806"]
+"scripts/**/*.py" = ["N806"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
