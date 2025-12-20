@@ -1,0 +1,3 @@
+"""
+Payoffs package initialization.
+"""
