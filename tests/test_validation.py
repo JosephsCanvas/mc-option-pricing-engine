@@ -8,7 +8,8 @@ import pytest
 from mc_pricer.models.gbm import GeometricBrownianMotion
 from mc_pricer.payoffs.plain_vanilla import EuropeanCallPayoff, EuropeanPutPayoff
 from mc_pricer.pricers.monte_carlo import MonteCarloEngine
-from tests.utils.black_scholes import black_scholes_call, black_scholes_put
+
+from .utils.black_scholes import black_scholes_call, black_scholes_put
 
 
 class TestBlackScholesValidation:
