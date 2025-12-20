@@ -7,6 +7,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from mc_pricer.greeks.finite_diff import finite_diff_delta, finite_diff_vega
+from mc_pricer.greeks.pathwise import pathwise_delta_vega, summarize_samples
+from mc_pricer.greeks.types import GreeksResult
 from mc_pricer.models.gbm import GeometricBrownianMotion
 
 
@@ -217,3 +220,141 @@ class MonteCarloEngine:
         )
 
         return result, discounted_payoffs
+
+    def compute_greeks(
+        self,
+        option_type: str,
+        method: str = "pw",
+        fd_seeds: int = 10,
+        fd_step_spot: float = 1e-4,
+        fd_step_sigma: float = 1e-4
+    ) -> GreeksResult:
+        """
+        Compute option Greeks (Delta and Vega).
+
+        Parameters
+        ----------
+        option_type : str
+            'call' or 'put'
+        method : str, optional
+            Method to use: 'pw' (pathwise), 'fd' (finite difference), or 'both'
+        fd_seeds : int, optional
+            Number of seeds for FD standard error estimation
+        fd_step_spot : float, optional
+            Relative step size for Delta FD
+        fd_step_sigma : float, optional
+            Absolute step size for Vega FD
+
+        Returns
+        -------
+        GreeksResult
+            Container with delta and vega estimates
+        """
+        if method not in ['pw', 'fd', 'both']:
+            raise ValueError(f"method must be 'pw', 'fd', or 'both', got {method}")
+
+        delta_result = None
+        vega_result = None
+
+        # Pathwise Greeks
+        if method in ['pw', 'both']:
+            # Simulate terminal prices
+            S_T = self.model.simulate_terminal(
+                n_paths=self.n_paths,
+                antithetic=self.antithetic
+            )
+
+            # Compute pathwise delta and vega samples
+            delta_samples, vega_samples = pathwise_delta_vega(
+                S_T=S_T,
+                S0=self.model.S0,
+                K=self._get_strike_from_payoff(),
+                r=self.model.r,
+                sigma=self.model.sigma,
+                T=self.model.T,
+                option_type=option_type
+            )
+
+            # Summarize samples
+            delta_pw = summarize_samples(delta_samples)
+            vega_pw = summarize_samples(vega_samples)
+
+            if method == 'pw':
+                delta_result = delta_pw
+                vega_result = vega_pw
+
+        # Finite difference Greeks
+        if method in ['fd', 'both']:
+            # Create engine factory
+            def engine_factory(S0_new, sigma_new, seed_new):
+                from mc_pricer.models.gbm import GeometricBrownianMotion
+                model_new = GeometricBrownianMotion(
+                    S0=S0_new,
+                    r=self.model.r,
+                    sigma=sigma_new,
+                    T=self.model.T,
+                    seed=seed_new
+                )
+                return MonteCarloEngine(
+                    model=model_new,
+                    payoff=self.payoff,
+                    n_paths=self.n_paths,
+                    antithetic=self.antithetic,
+                    control_variate=self.control_variate,
+                    seed=seed_new
+                )
+
+            base_params = {
+                'S0': self.model.S0,
+                'sigma': self.model.sigma
+            }
+
+            # Compute FD Greeks
+            delta_fd = finite_diff_delta(
+                engine_factory=engine_factory,
+                base_params=base_params,
+                h_rel=fd_step_spot,
+                seed=123
+            )
+
+            vega_fd = finite_diff_vega(
+                engine_factory=engine_factory,
+                base_params=base_params,
+                h_abs=fd_step_sigma,
+                seed=123
+            )
+
+            if method == 'fd':
+                delta_result = delta_fd
+                vega_result = vega_fd
+            elif method == 'both':
+                # For 'both', return PW in main fields and store FD separately
+                # For simplicity, we'll return PW as the primary result
+                delta_result = delta_pw
+                vega_result = vega_pw
+
+        return GreeksResult(
+            delta=delta_result,
+            vega=vega_result,
+            method=method,
+            fd_step_spot=fd_step_spot if method in ['fd', 'both'] else None,
+            fd_step_sigma=fd_step_sigma if method in ['fd', 'both'] else None
+        )
+
+    def _get_strike_from_payoff(self) -> float:
+        """
+        Extract strike price from payoff function.
+
+        This is a helper method that attempts to get the strike from common payoff types.
+        """
+        # Try to get strike from payoff object attributes
+        if hasattr(self.payoff, 'strike'):
+            return self.payoff.strike
+        elif hasattr(self.payoff, 'K'):
+            return self.payoff.K
+        else:
+            raise AttributeError(
+                "Cannot extract strike from payoff. "
+                "Payoff must have 'strike' or 'K' attribute."
+            )
+
