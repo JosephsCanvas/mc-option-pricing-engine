@@ -11,7 +11,7 @@ A production-grade Monte Carlo simulation engine for pricing financial derivativ
 - **Geometric Brownian Motion (GBM)** asset price simulation with vectorized implementation
 - **European Options** (call/put) with analytical payoff functions
 - **Monte Carlo Pricing Engine** with:
-  - Variance reduction via **antithetic variates**
+  - Variance reduction via **antithetic variates** and **control variates** (~62% stderr reduction)
   - Statistical confidence intervals (95% CI)
   - Deterministic reproducibility (seed control)
 - **Validation Suite** comparing MC prices to Black-Scholes closed-form solutions
@@ -36,7 +36,11 @@ mc-option-pricing-engine/
 │   ├── test_monte_carlo.py    # MC engine tests
 │   └── test_validation.py     # Black-Scholes validation tests
 ├── scripts/                    # CLI tools
-│   └── mc_price.py            # Command-line pricing interface
+│   ├── mc_price.py            # Command-line pricing interface
+│   ├── demo_all.py            # Complete feature demonstration
+│   ├── convergence_demo.py    # Convergence analysis
+│   ├── benchmark_variance_reduction.py  # Statistical benchmarks
+│   └── plot_convergence.py    # Convergence visualization
 ├── notebooks/                  # Jupyter notebooks (placeholder)
 ├── pyproject.toml             # Project configuration
 └── .github/workflows/ci.yml   # CI/CD configuration
@@ -68,6 +72,19 @@ mc-option-pricing-engine/
    pip install -e ".[dev]"
    ```
 
+### Quick Demo
+
+Run the complete demonstration:
+```bash
+python scripts/demo_all.py
+```
+
+This demonstrates:
+- Basic European option pricing
+- Variance reduction techniques comparison
+- Black-Scholes validation
+- Put-call parity verification
+
 ### Running Tests
 
 Run all tests with pytest:
@@ -98,9 +115,14 @@ Price a European call option:
 python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42
 ```
 
-Price with antithetic variates for variance reduction:
+Price with control variate variance reduction (~62% stderr reduction):
 ```bash
-python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --antithetic
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --control_variate
+```
+
+Combine antithetic variates and control variates:
+```bash
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --antithetic --control_variate
 ```
 
 Price a European put option:

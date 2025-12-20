@@ -53,6 +53,11 @@ def parse_args():
         action="store_true",
         help="Use antithetic variates for variance reduction"
     )
+    parser.add_argument(
+        "--control_variate",
+        action="store_true",
+        help="Use control variate variance reduction"
+    )
 
     # Option parameters
     parser.add_argument(
@@ -84,6 +89,7 @@ def main():
     print("\nSimulation Parameters:")
     print(f"  Number of Paths:        {args.n_paths:,}")
     print(f"  Antithetic Variates:    {args.antithetic}")
+    print(f"  Control Variate:        {args.control_variate}")
     print(f"  Random Seed:            {args.seed if args.seed is not None else 'None (random)'}")
 
     # Create model
@@ -106,7 +112,8 @@ def main():
         model=model,
         payoff=payoff,
         n_paths=args.n_paths,
-        antithetic=args.antithetic
+        antithetic=args.antithetic,
+        control_variate=args.control_variate
     )
 
     # Price the option
@@ -122,6 +129,8 @@ def main():
     print(f"  95% Confidence Interval: [{result.ci_lower:.6f}, {result.ci_upper:.6f}]")
     print(f"  CI Width:               {result.ci_upper - result.ci_lower:.6f}")
     print(f"  Relative Error (σ/μ):   {result.stderr / result.price * 100:.4f}%")
+    if result.control_variate_beta is not None:
+        print(f"  Control Variate Beta:   {result.control_variate_beta:.6f}")
     print("\n" + "=" * 70)
 
 
