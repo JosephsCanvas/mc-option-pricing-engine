@@ -218,6 +218,50 @@ Test: ATM Call (S0=100, K=100, r=5%, σ=20%, T=1y)
   ✓ Within 3 standard errors
 ```
 
+## Greeks Convergence Demo
+
+The engine supports **Delta** and **Vega** computation using two estimators: **Pathwise (PW)** derivatives and **Finite Difference (FD)**. The Pathwise estimator provides low-variance, efficient Greeks by differentiating the simulation paths analytically, while Finite Difference serves as an independent cross-check but requires multiple simulations (making it more computationally expensive). Both methods converge to Black-Scholes analytical values as the number of paths increases.
+
+Run the convergence demonstration:
+```bash
+python scripts/greeks_convergence_demo.py
+```
+
+**Sample Output**:
+```
+====================================================================================================
+Greeks Convergence Analysis - Pathwise Estimator
+====================================================================================================
+
+Parameters: S0=100.0, K=100.0, r=0.05, sigma=0.2, T=1.0
+Option Type: European Call
+Seed: 42
+
+Black-Scholes Targets: Delta=0.636831, Vega=37.5240
+
+------------------------------------------------------------------------------------------------------------------------
+n_paths      Delta      DeltaErr   Delta SE   Vega       VegaErr    Vega SE    Delta CI               Vega CI
+------------------------------------------------------------------------------------------------------------------------
+1,000        0.628003    -0.008827 0.018097   34.5368       -2.9873 2.287771   [0.592533, 0.663474]   [30.0527, 39.0208]    
+5,000        0.630953    -0.005877 0.008129   36.0712       -1.4528 1.059920   [0.615020, 0.646886]   [33.9938, 38.1487]
+20,000       0.637373     0.000542 0.004084   38.1216        0.5976 0.541584   [0.629368, 0.645378]   [37.0601, 39.1832]
+100,000      0.634516    -0.002315 0.001824   37.4800       -0.0440 0.241222   [0.630940, 0.638092]   [37.0072, 37.9528]    
+------------------------------------------------------------------------------------------------------------------------
+
+====================================================================================================
+Finite Difference Comparison (n_paths=100,000)
+====================================================================================================
+
+Method: Finite Difference
+  Delta: 0.637264 ± 0.000289
+    95% CI: [0.636697, 0.637830]
+  Vega:  37.4895 ± 0.0131
+    95% CI: [37.4637, 37.5152]
+  FD steps: h_spot=0.0001, h_sigma=0.0001
+```
+
+As shown in the table above, **DeltaErr** and **VegaErr** (the differences from Black-Scholes analytical values) decrease as O(1/√n), with standard errors shrinking from ~0.018 (1k paths) to ~0.0018 (100k paths) for Delta. The **Pathwise** estimator achieves low variance with a single simulation, while **Finite Difference** requires 10 additional simulations (5 for Delta + 5 for Vega) but provides an independent validation that both methods agree within confidence intervals.
+
 ## Roadmap
 
 Future enhancements planned:
