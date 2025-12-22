@@ -342,4 +342,4 @@ Contributions are welcome! Please:
 
 ---
 
-**Built for production. Validated for accuracy. Ready for interviews.**
+**Built for production. Validated for accuracy.**
