@@ -19,7 +19,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from mc_pricer.analytics.black_scholes import bs_delta, bs_gamma, bs_price, bs_vega
 from mc_pricer.analytics.implied_vol import implied_vol
 from mc_pricer.models.gbm import GeometricBrownianMotion
+from mc_pricer.models.heston import HestonModel
 from mc_pricer.payoffs.plain_vanilla import EuropeanCallPayoff, EuropeanPutPayoff
+from mc_pricer.pricers.heston_monte_carlo import HestonMonteCarloEngine
 from mc_pricer.pricers.lsm import price_american_lsm
 from mc_pricer.pricers.monte_carlo import MonteCarloEngine
 
@@ -35,8 +37,27 @@ def parse_args():
     parser.add_argument("--S0", type=float, required=True, help="Initial spot price")
     parser.add_argument("--K", type=float, required=True, help="Strike price")
     parser.add_argument("--r", type=float, required=True, help="Risk-free rate")
-    parser.add_argument("--sigma", type=float, required=True, help="Volatility")
     parser.add_argument("--T", type=float, required=True, help="Time to maturity (years)")
+
+    # Model selection
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["gbm", "heston"],
+        default="gbm",
+        help="Pricing model: gbm (Black-Scholes) or heston (stochastic volatility)"
+    )
+
+    # GBM parameters
+    parser.add_argument("--sigma", type=float, help="Volatility (required for GBM)")
+
+    # Heston parameters
+    parser.add_argument("--kappa", type=float, help="Mean reversion speed (required for Heston)")
+    parser.add_argument("--theta", type=float, help="Long-term variance (required for Heston)")
+    parser.add_argument("--xi", type=float, help="Volatility of volatility (required for Heston)")
+    parser.add_argument("--rho", type=float, help="Correlation (required for Heston)")
+    parser.add_argument("--v0", type=float, help="Initial variance (required for Heston)")
+    parser.add_argument("--n_steps", type=int, help="Number of time steps (required for Heston)")
 
     # Simulation parameters
     parser.add_argument(
@@ -129,6 +150,29 @@ def main():
     """Main entry point for CLI."""
     args = parse_args()
 
+    # Validate model-specific parameters
+    if args.model == "gbm" and args.sigma is None:
+        print("Error: --sigma is required for GBM model")
+        sys.exit(1)
+
+    if args.model == "heston":
+        missing = []
+        if args.kappa is None:
+            missing.append("--kappa")
+        if args.theta is None:
+            missing.append("--theta")
+        if args.xi is None:
+            missing.append("--xi")
+        if args.rho is None:
+            missing.append("--rho")
+        if args.v0 is None:
+            missing.append("--v0")
+        if args.n_steps is None:
+            missing.append("--n_steps")
+        if missing:
+            print(f"Error: Heston model requires: {', '.join(missing)}")
+            sys.exit(1)
+
     # Print input parameters
     print("=" * 70)
     print("Monte Carlo Option Pricing Engine")
@@ -137,28 +181,68 @@ def main():
     print(f"  Spot Price (S0):        {args.S0:,.2f}")
     print(f"  Strike Price (K):       {args.K:,.2f}")
     print(f"  Risk-free Rate (r):     {args.r:.4f}")
-    print(f"  Volatility (σ):         {args.sigma:.4f}")
+    if args.model == "gbm":
+        print(f"  Volatility (σ):         {args.sigma:.4f}")
+    else:
+        print(f"  Kappa (κ):              {args.kappa:.4f}")
+        print(f"  Theta (θ):              {args.theta:.4f}")
+        print(f"  Xi (ξ):                 {args.xi:.4f}")
+        print(f"  Rho (ρ):                {args.rho:.4f}")
+        print(f"  Initial Variance (v0):  {args.v0:.4f}")
     print(f"  Time to Maturity (T):   {args.T:.4f} years")
     print(f"  Option Type:            {args.option_type.upper()}")
     print(f"  Option Style:           {args.style.upper()}")
+    print(f"  Model:                  {args.model.upper()}")
     print("\nSimulation Parameters:")
     print(f"  Number of Paths:        {args.n_paths:,}")
+    if args.model == "heston":
+        print(f"  Time Steps:             {args.n_steps}")
     if args.style == "american":
         print(f"  LSM Time Steps:         {args.lsm_steps}")
         print(f"  LSM Basis Functions:    {args.lsm_basis}")
     print(f"  Antithetic Variates:    {args.antithetic}")
-    if args.style == "european":
+    if args.style == "european" and args.model == "gbm":
         print(f"  Control Variate:        {args.control_variate}")
     print(f"  Random Seed:            {args.seed if args.seed is not None else 'None (random)'}")
 
+    # Check for incompatible features with Heston
+    if args.model == "heston":
+        warnings = []
+        if args.style == "american":
+            warnings.append("American options not supported with Heston model")
+        if args.control_variate:
+            warnings.append("Control variate not supported with Heston model")
+        if args.greeks != "none":
+            warnings.append("Greeks not supported with Heston model")
+        if warnings:
+            print("\n⚠ Warnings:")
+            for warning in warnings:
+                print(f"  • {warning}")
+            if args.style == "american":
+                print("\nPlease use GBM model for American options.")
+                sys.exit(1)
+
     # Create model
-    model = GeometricBrownianMotion(
-        S0=args.S0,
-        r=args.r,
-        sigma=args.sigma,
-        T=args.T,
-        seed=args.seed
-    )
+    if args.model == "gbm":
+        model = GeometricBrownianMotion(
+            S0=args.S0,
+            r=args.r,
+            sigma=args.sigma,
+            T=args.T,
+            seed=args.seed
+        )
+    else:  # heston
+        model = HestonModel(
+            S0=args.S0,
+            r=args.r,
+            T=args.T,
+            kappa=args.kappa,
+            theta=args.theta,
+            xi=args.xi,
+            rho=args.rho,
+            v0=args.v0,
+            seed=args.seed
+        )
 
     # Price the option
     print("\n" + "=" * 70)
@@ -202,13 +286,23 @@ def main():
         payoff = EuropeanPutPayoff(strike=args.K)
 
     # Create pricing engine
-    engine = MonteCarloEngine(
-        model=model,
-        payoff=payoff,
-        n_paths=args.n_paths,
-        antithetic=args.antithetic,
-        control_variate=args.control_variate
-    )
+    if args.model == "gbm":
+        engine = MonteCarloEngine(
+            model=model,
+            payoff=payoff,
+            n_paths=args.n_paths,
+            antithetic=args.antithetic,
+            control_variate=args.control_variate
+        )
+    else:  # heston
+        engine = HestonMonteCarloEngine(
+            model=model,
+            payoff=payoff,
+            n_paths=args.n_paths,
+            n_steps=args.n_steps,
+            antithetic=args.antithetic,
+            seed=args.seed
+        )
 
     # Price the option
     print("\n" + "=" * 70)
@@ -223,11 +317,13 @@ def main():
     print(f"  95% Confidence Interval: [{result.ci_lower:.6f}, {result.ci_upper:.6f}]")
     print(f"  CI Width:               {result.ci_upper - result.ci_lower:.6f}")
     print(f"  Relative Error (σ/μ):   {result.stderr / result.price * 100:.4f}%")
-    if result.control_variate_beta is not None:
+    if hasattr(result, 'control_variate_beta') and result.control_variate_beta is not None:
         print(f"  Control Variate Beta:   {result.control_variate_beta:.6f}")
+    if hasattr(result, 'n_steps'):
+        print(f"  Time Steps Used:        {result.n_steps}")
 
-    # Compute Greeks if requested
-    if args.greeks != "none":
+    # Compute Greeks if requested (GBM only)
+    if args.greeks != "none" and args.model == "gbm":
         print("\n" + "=" * 70)
         print("Computing Greeks...")
         print("=" * 70)
@@ -287,8 +383,8 @@ def main():
                 print(f"  Vega:   {greeks.vega.value:.4f} ± {greeks.vega.standard_error:.4f}")
                 print(f"    95% CI: [{greeks.vega.ci_lower:.4f}, {greeks.vega.ci_upper:.4f}]")
 
-    # Black-Scholes analytics (European only)
-    if args.bs:
+    # Black-Scholes analytics (European GBM only)
+    if args.bs and args.model == "gbm":
         print("\n" + "=" * 70)
         print("Black-Scholes Analytics")
         print("=" * 70)
@@ -313,8 +409,8 @@ def main():
         if result.stderr > 0:
             print(f"  Std Errors:  {abs(mc_error) / result.stderr:.2f}σ")
 
-    # Implied volatility (European only)
-    if args.implied_vol is not None:
+    # Implied volatility (European GBM only)
+    if args.implied_vol is not None and args.model == "gbm":
         print("\n" + "=" * 70)
         print("Implied Volatility")
         print("=" * 70)
