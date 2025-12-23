@@ -16,6 +16,8 @@ from pathlib import Path
 # Add parent directory to path to allow imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+from mc_pricer.analytics.black_scholes import bs_delta, bs_gamma, bs_price, bs_vega
+from mc_pricer.analytics.implied_vol import implied_vol
 from mc_pricer.models.gbm import GeometricBrownianMotion
 from mc_pricer.payoffs.plain_vanilla import EuropeanCallPayoff, EuropeanPutPayoff
 from mc_pricer.pricers.lsm import price_american_lsm
@@ -107,6 +109,19 @@ def parse_args():
         help="Method for Greeks computation: pw (pathwise), fd (finite difference), or both"
     )
 
+    # Analytics parameters
+    parser.add_argument(
+        "--bs",
+        action="store_true",
+        help="Display Black-Scholes reference price and Greeks (European only)"
+    )
+    parser.add_argument(
+        "--implied_vol",
+        type=float,
+        default=None,
+        help="Compute implied volatility from given market price (European only)"
+    )
+
     return parser.parse_args()
 
 
@@ -154,6 +169,9 @@ def main():
         # American option pricing with LSM
         if args.control_variate or args.greeks != "none":
             print("\nNote: Control variate and Greeks not supported for American options (LSM)")
+
+        if args.bs or args.implied_vol is not None:
+            print("Note: Black-Scholes and implied volatility are European-only features")
 
         result = price_american_lsm(
             model=model,
@@ -268,6 +286,62 @@ def main():
             if args.greeks in ["vega", "all"] and greeks.vega is not None:
                 print(f"  Vega:   {greeks.vega.value:.4f} ± {greeks.vega.standard_error:.4f}")
                 print(f"    95% CI: [{greeks.vega.ci_lower:.4f}, {greeks.vega.ci_upper:.4f}]")
+
+    # Black-Scholes analytics (European only)
+    if args.bs:
+        print("\n" + "=" * 70)
+        print("Black-Scholes Analytics")
+        print("=" * 70)
+
+        bs_price_val = bs_price(args.S0, args.K, args.r, args.T, args.sigma, args.option_type)
+        bs_delta_val = bs_delta(args.S0, args.K, args.r, args.T, args.sigma, args.option_type)
+        bs_gamma_val = bs_gamma(args.S0, args.K, args.r, args.T, args.sigma)
+        bs_vega_val = bs_vega(args.S0, args.K, args.r, args.T, args.sigma)
+
+        print("\nBlack-Scholes Reference:")
+        print(f"  Price:  {bs_price_val:.6f}")
+        print(f"  Delta:  {bs_delta_val:.6f}")
+        print(f"  Gamma:  {bs_gamma_val:.6f}")
+        print(f"  Vega:   {bs_vega_val:.4f}")
+
+        mc_error = result.price - bs_price_val
+        print("\nMonte Carlo vs Black-Scholes:")
+        print(f"  MC Price:    {result.price:.6f}")
+        print(f"  BS Price:    {bs_price_val:.6f}")
+        print(f"  Difference:  {mc_error:.6f}")
+        print(f"  MC Stderr:   {result.stderr:.6f}")
+        if result.stderr > 0:
+            print(f"  Std Errors:  {abs(mc_error) / result.stderr:.2f}σ")
+
+    # Implied volatility (European only)
+    if args.implied_vol is not None:
+        print("\n" + "=" * 70)
+        print("Implied Volatility")
+        print("=" * 70)
+
+        try:
+            iv = implied_vol(
+                price=args.implied_vol,
+                S0=args.S0,
+                K=args.K,
+                r=args.r,
+                T=args.T,
+                option_type=args.option_type
+            )
+            print(f"\nMarket Price:      {args.implied_vol:.6f}")
+            print(f"Implied Vol:       {iv:.6f}")
+            print(f"Input Vol:         {args.sigma:.6f}")
+            print(f"Vol Difference:    {iv - args.sigma:.6f}")
+
+            # Verify by computing BS price with implied vol
+            verify_price = bs_price(args.S0, args.K, args.r, args.T, iv, args.option_type)
+            print("\nVerification:")
+            print(f"  BS(IV) Price:    {verify_price:.6f}")
+            print(f"  Target Price:    {args.implied_vol:.6f}")
+            print(f"  Price Error:     {abs(verify_price - args.implied_vol):.2e}")
+
+        except ValueError as e:
+            print(f"\nError computing implied volatility: {e}")
 
     print("\n" + "=" * 70)
 
