@@ -2,14 +2,10 @@
 Tests for Greeks computation (Delta and Vega).
 """
 
+from mc_pricer.analytics.black_scholes import bs_delta, bs_vega
 from mc_pricer.models.gbm import GeometricBrownianMotion
 from mc_pricer.payoffs.plain_vanilla import EuropeanCallPayoff, EuropeanPutPayoff
 from mc_pricer.pricers.monte_carlo import MonteCarloEngine
-from tests.utils.black_scholes import (
-    black_scholes_delta_call,
-    black_scholes_delta_put,
-    black_scholes_vega,
-)
 
 
 class TestPathwiseGreeks:
@@ -27,8 +23,8 @@ class TestPathwiseGreeks:
         seed = 42
 
         # Black-Scholes Greeks
-        delta_bs = black_scholes_delta_call(S0, K, r, sigma, T)
-        vega_bs = black_scholes_vega(S0, K, r, sigma, T)
+        delta_bs = bs_delta(S0, K, r, T, sigma, "call")
+        vega_bs = bs_vega(S0, K, r, T, sigma)
 
         # Monte Carlo with pathwise Greeks
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
@@ -81,8 +77,8 @@ class TestPathwiseGreeks:
         seed = 42
 
         # Black-Scholes Greeks
-        delta_bs = black_scholes_delta_put(S0, K, r, sigma, T)
-        vega_bs = black_scholes_vega(S0, K, r, sigma, T)
+        delta_bs = bs_delta(S0, K, r, T, sigma, "put")
+        vega_bs = bs_vega(S0, K, r, T, sigma)
 
         # Monte Carlo with pathwise Greeks
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
