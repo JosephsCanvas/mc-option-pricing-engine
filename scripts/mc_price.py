@@ -58,6 +58,13 @@ def parse_args():
     parser.add_argument("--rho", type=float, help="Correlation (required for Heston)")
     parser.add_argument("--v0", type=float, help="Initial variance (required for Heston)")
     parser.add_argument("--n_steps", type=int, help="Number of time steps (required for Heston)")
+    parser.add_argument(
+        "--heston_scheme",
+        type=str,
+        choices=["full_truncation_euler", "qe"],
+        default="full_truncation_euler",
+        help="Heston variance discretization scheme"
+    )
 
     # Simulation parameters
     parser.add_argument(
@@ -189,6 +196,7 @@ def main():
         print(f"  Xi (ξ):                 {args.xi:.4f}")
         print(f"  Rho (ρ):                {args.rho:.4f}")
         print(f"  Initial Variance (v0):  {args.v0:.4f}")
+        print(f"  Scheme:                 {args.heston_scheme}")
     print(f"  Time to Maturity (T):   {args.T:.4f} years")
     print(f"  Option Type:            {args.option_type.upper()}")
     print(f"  Option Style:           {args.style.upper()}")
@@ -241,7 +249,8 @@ def main():
             xi=args.xi,
             rho=args.rho,
             v0=args.v0,
-            seed=args.seed
+            seed=args.seed,
+            scheme=args.heston_scheme
         )
 
     # Price the option
