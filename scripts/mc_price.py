@@ -89,6 +89,24 @@ def parse_args():
         action="store_true",
         help="Use control variate variance reduction"
     )
+    parser.add_argument(
+        "--rng",
+        type=str,
+        choices=["pseudo", "sobol"],
+        default="pseudo",
+        help="RNG type: pseudo (pseudo-random) or sobol (Quasi-Monte Carlo)"
+    )
+    parser.add_argument(
+        "--scramble",
+        action="store_true",
+        help="Use digital shift scrambling for Sobol sequences (QMC only)"
+    )
+    parser.add_argument(
+        "--qmc_dim_override",
+        type=int,
+        default=None,
+        help="Override dimension for QMC (advanced users only)"
+    )
 
     # Option parameters
     parser.add_argument(
@@ -212,6 +230,11 @@ def main():
     if args.style == "european" and args.model == "gbm":
         print(f"  Control Variate:        {args.control_variate}")
     print(f"  Random Seed:            {args.seed if args.seed is not None else 'None (random)'}")
+    print(f"  RNG Type:               {args.rng.upper()}")
+    if args.rng == "sobol":
+        print(f"  Scrambling:             {args.scramble}")
+        if args.qmc_dim_override:
+            print(f"  QMC Dimension Override: {args.qmc_dim_override}")
 
     # Check for incompatible features with Heston
     if args.model == "heston":
@@ -237,7 +260,9 @@ def main():
             r=args.r,
             sigma=args.sigma,
             T=args.T,
-            seed=args.seed
+            seed=args.seed,
+            rng_type=args.rng,
+            scramble=args.scramble
         )
     else:  # heston
         model = HestonModel(
@@ -250,7 +275,9 @@ def main():
             rho=args.rho,
             v0=args.v0,
             seed=args.seed,
-            scheme=args.heston_scheme
+            scheme=args.heston_scheme,
+            rng_type=args.rng,
+            scramble=args.scramble
         )
 
     # Price the option

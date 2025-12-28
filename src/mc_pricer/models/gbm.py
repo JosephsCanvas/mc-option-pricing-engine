@@ -2,8 +2,11 @@
 Geometric Brownian Motion (GBM) model for asset price simulation.
 """
 
+from typing import Literal
 
 import numpy as np
+
+from mc_pricer.rng.sobol import SobolGenerator, inverse_normal_cdf
 
 
 class GeometricBrownianMotion:
@@ -26,7 +29,9 @@ class GeometricBrownianMotion:
         r: float,
         sigma: float,
         T: float,
-        seed: int | None = None
+        seed: int | None = None,
+        rng_type: Literal["pseudo", "sobol"] = "pseudo",
+        scramble: bool = False
     ):
         """
         Initialize GBM model parameters.
@@ -43,6 +48,12 @@ class GeometricBrownianMotion:
             Time to maturity in years (must be > 0)
         seed : int, optional
             Random seed for reproducibility
+        rng_type : Literal["pseudo", "sobol"], optional
+            Type of random number generator (default: "pseudo")
+            - "pseudo": Standard pseudorandom numbers
+            - "sobol": Quasi-Monte Carlo Sobol sequence
+        scramble : bool, optional
+            Whether to scramble Sobol sequence (only for rng_type="sobol")
         """
         if S0 <= 0:
             raise ValueError("Initial price S0 must be positive")
@@ -55,7 +66,12 @@ class GeometricBrownianMotion:
         self.r = r
         self.sigma = sigma
         self.T = T
+        self.rng_type = rng_type
+        self.scramble = scramble
         self.rng = np.random.default_rng(seed)
+
+        # Store seed for Sobol generator initialization
+        self._seed = seed
 
     def simulate_paths(
         self,
@@ -80,6 +96,11 @@ class GeometricBrownianMotion:
         np.ndarray
             Array of shape (n_paths, n_steps + 1) containing simulated paths.
             Each row is a path, starting with S0.
+
+        Notes
+        -----
+        When using QMC (rng_type="sobol"), the dimensionality is n_steps.
+        For large n_steps, consider path construction methods like Brownian bridge.
         """
         if n_paths <= 0:
             raise ValueError("n_paths must be positive")
@@ -88,15 +109,33 @@ class GeometricBrownianMotion:
 
         dt = self.T / n_steps
 
-        # Effective number of random paths to generate
-        n_random = (n_paths + 1) // 2 if antithetic else n_paths
-
         # Generate random increments
-        Z = self.rng.standard_normal((n_random, n_steps))
+        if self.rng_type == "sobol":
+            # Use Sobol sequence (dimension = n_steps)
+            n_random = (n_paths + 1) // 2 if antithetic else n_paths
 
-        if antithetic:
-            # Create antithetic pairs
-            Z = np.vstack([Z, -Z])[:n_paths]
+            sobol = SobolGenerator(
+                dimension=n_steps,
+                seed=self._seed,
+                scramble=self.scramble
+            )
+            U = sobol.generate(n_random, skip=0)
+
+            if antithetic:
+                # Antithetic in uniform space
+                U_anti = 1.0 - U
+                U = np.vstack([U, U_anti])[:n_paths]
+
+            # Transform to normal
+            Z = inverse_normal_cdf(U)
+        else:
+            # Use pseudorandom numbers
+            n_random = (n_paths + 1) // 2 if antithetic else n_paths
+            Z = self.rng.standard_normal((n_random, n_steps))
+
+            if antithetic:
+                # Create antithetic pairs
+                Z = np.vstack([Z, -Z])[:n_paths]
 
         # Pre-compute drift and diffusion terms
         drift = (self.r - 0.5 * self.sigma**2) * dt
@@ -132,19 +171,42 @@ class GeometricBrownianMotion:
         -------
         np.ndarray
             Array of shape (n_paths,) containing terminal prices S_T
+
+        Notes
+        -----
+        When using QMC (rng_type="sobol"), antithetic variates are implemented
+        by pairing U and (1-U) in the uniform space before inverse transform.
         """
         if n_paths <= 0:
             raise ValueError("n_paths must be positive")
 
-        # Effective number of random paths to generate
-        n_random = (n_paths + 1) // 2 if antithetic else n_paths
-
         # Generate random normal variates
-        Z = self.rng.standard_normal(n_random)
+        if self.rng_type == "sobol":
+            # Use Sobol sequence
+            n_random = (n_paths + 1) // 2 if antithetic else n_paths
 
-        if antithetic:
-            # Create antithetic pairs
-            Z = np.concatenate([Z, -Z])[:n_paths]
+            sobol = SobolGenerator(
+                dimension=1,
+                seed=self._seed,
+                scramble=self.scramble
+            )
+            U = sobol.generate(n_random, skip=0)[:, 0]
+
+            if antithetic:
+                # Antithetic in uniform space: pair U with (1-U)
+                U_anti = 1.0 - U
+                U = np.concatenate([U, U_anti])[:n_paths]
+
+            # Transform to normal
+            Z = inverse_normal_cdf(U)
+        else:
+            # Use pseudorandom numbers
+            n_random = (n_paths + 1) // 2 if antithetic else n_paths
+            Z = self.rng.standard_normal(n_random)
+
+            if antithetic:
+                # Create antithetic pairs
+                Z = np.concatenate([Z, -Z])[:n_paths]
 
         # Compute terminal prices using closed-form solution
         # S_T = S_0 * exp((r - 0.5*σ²)*T + σ*√T*Z)
