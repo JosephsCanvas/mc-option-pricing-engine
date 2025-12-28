@@ -29,6 +29,8 @@ class HestonPricingResult:
         Number of simulation paths used
     n_steps : int
         Number of time steps per path
+    scheme : str
+        Variance discretization scheme used
     """
     price: float
     stderr: float
@@ -36,6 +38,7 @@ class HestonPricingResult:
     ci_upper: float
     n_paths: int
     n_steps: int
+    scheme: str = "full_truncation_euler"
 
     def __repr__(self) -> str:
         return (
@@ -44,7 +47,8 @@ class HestonPricingResult:
             f"  stderr={self.stderr:.6f},\n"
             f"  CI95=[{self.ci_lower:.6f}, {self.ci_upper:.6f}],\n"
             f"  n_paths={self.n_paths},\n"
-            f"  n_steps={self.n_steps}\n"
+            f"  n_steps={self.n_steps},\n"
+            f"  scheme='{self.scheme}'\n"
             f")"
         )
 
@@ -136,5 +140,6 @@ class HestonMonteCarloEngine:
             ci_lower=ci_lower,
             ci_upper=ci_upper,
             n_paths=self.n_paths,
-            n_steps=self.n_steps
+            n_steps=self.n_steps,
+            scheme=self.model.scheme
         )

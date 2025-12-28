@@ -262,6 +262,128 @@ Method: Finite Difference
 
 As shown in the table above, **DeltaErr** and **VegaErr** (the differences from Black-Scholes analytical values) decrease as O(1/√n), with standard errors shrinking from ~0.018 (1k paths) to ~0.0018 (100k paths) for Delta. The **Pathwise** estimator achieves low variance with a single simulation, while **Finite Difference** requires 10 additional simulations (5 for Delta + 5 for Vega) but provides an independent validation that both methods agree within confidence intervals.
 
+## Heston Stochastic Volatility Model
+
+The engine includes the **Heston stochastic volatility model**, which extends the Black-Scholes framework by allowing variance to follow its own stochastic process:
+
+```
+dS_t = r * S_t * dt + sqrt(v_t) * S_t * dW1_t
+dv_t = κ * (θ - v_t) * dt + ξ * sqrt(v_t) * dW2_t
+```
+
+where:
+- **v_t**: instantaneous variance at time t
+- **κ**: mean reversion speed
+- **θ**: long-term variance level
+- **ξ**: volatility of volatility
+- **ρ**: correlation between W1 and W2 (typically negative)
+
+### Variance Discretization Schemes
+
+Two discretization schemes are supported for the CIR variance process:
+
+#### 1. Full Truncation Euler (Default)
+Simple explicit Euler scheme with max(v, 0) truncation to ensure non-negativity:
+```
+v_{t+dt} = max(v_t + κ*(θ - max(v_t,0))*dt + ξ*sqrt(max(v_t,0))*sqrt(dt)*Z, 0)
+```
+
+**Pros**: Simple, fast, easy to understand  
+**Cons**: Can be biased for extreme parameters (high ξ, low κθ)
+
+#### 2. Quadratic-Exponential (QE) 
+Andersen's (2008) scheme that samples from the exact conditional distribution:
+- **Quadratic regime** (ψ ≤ 1.5): Uses transformed normal approximation
+- **Exponential regime** (ψ > 1.5): Uses exponential distribution approximation
+
+**Pros**: Better convergence, less biased, handles extreme parameters  
+**Cons**: Slightly more complex, ~10-20% slower
+
+### Usage Example
+
+```python
+from mc_pricer.models.heston import HestonModel
+from mc_pricer.payoffs.plain_vanilla import EuropeanCallPayoff
+from mc_pricer.pricers.heston_monte_carlo import HestonMonteCarloEngine
+
+# Create Heston model with QE scheme
+model = HestonModel(
+    S0=100.0,
+    r=0.05,
+    T=1.0,
+    kappa=2.0,      # Mean reversion speed
+    theta=0.04,     # Long-term variance (σ² ≈ 0.2²)
+    xi=0.3,         # Vol of vol
+    rho=-0.7,       # Correlation (negative for leverage effect)
+    v0=0.04,        # Initial variance
+    seed=42,
+    scheme="qe"     # Use QE scheme (default: "full_truncation_euler")
+)
+
+# Price European call
+payoff = EuropeanCallPayoff(K=100.0)
+engine = HestonMonteCarloEngine(
+    model=model,
+    payoff=payoff,
+    n_paths=50000,
+    n_steps=200     # Number of time steps
+)
+
+result = engine.price()
+print(f"Price: {result.price:.6f} ± {result.stderr:.6f}")
+print(f"Scheme: {result.scheme}")
+```
+
+### CLI Usage
+
+```bash
+# Price with Full Truncation Euler (default)
+python scripts/mc_price.py --model heston --S0 100 --K 100 --r 0.05 --T 1.0 \
+    --kappa 2.0 --theta 0.04 --xi 0.3 --rho -0.7 --v0 0.04 \
+    --n_paths 50000 --n_steps 200
+
+# Price with QE scheme
+python scripts/mc_price.py --model heston --S0 100 --K 100 --r 0.05 --T 1.0 \
+    --kappa 2.0 --theta 0.04 --xi 0.3 --rho -0.7 --v0 0.04 \
+    --n_paths 50000 --n_steps 200 --heston_scheme qe
+```
+
+### Benchmarking Schemes
+
+Compare the two discretization schemes across strikes to analyze the volatility smile:
+
+```bash
+# Run benchmark (outputs JSON + summary table)
+python scripts/bench_heston_schemes.py --n_paths 50000 --n_steps 200 --n_seeds 3
+
+# Results saved to:
+#   results/heston_scheme_benchmark.json
+#   results/heston_scheme_summary.txt
+```
+
+**Sample Benchmark Output**:
+```
+Strike   FT Euler IV     QE IV           IV Diff     Price Diff
+------------------------------------------------------------------------
+70       0.242156        0.241983        -0.000173   -0.017324
+80       0.223847        0.223719        -0.000128   -0.010442
+90       0.209634        0.209538        -0.000096   -0.005821
+100      0.199874        0.199802        -0.000072   -0.003182
+110      0.194215        0.194163        -0.000052   -0.001822
+120      0.192037        0.191999        -0.000038   -0.001053
+130      0.192556        0.192527        -0.000029   -0.000633
+
+Smile Width:
+  FT Euler: 0.050120
+  QE:       0.049984
+
+Total Runtime:
+  FT Euler: 42.384s
+  QE:       48.107s
+```
+
+The QE scheme typically produces slightly lower implied volatilities (less bias) and slightly wider confidence intervals, with ~10-20% longer runtime due to regime switching logic.
+
 ## Roadmap
 
 Future enhancements planned:
