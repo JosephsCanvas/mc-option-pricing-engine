@@ -300,6 +300,138 @@ Future enhancements planned:
 - **Model parameter calibration** to market data
 - **Variance swap pricing**
 
+## Reproducible Research
+
+This project provides a complete infrastructure for reproducible computational experiments, suitable for academic research and quantitative analysis.
+
+### Experiment Runner
+
+The `scripts/runner.py` CLI enables running reproducible experiments with full metadata capture:
+
+```bash
+# Run European call variance reduction benchmark
+python scripts/runner.py --experiment european_call_bench
+
+# Run Heston volatility smile benchmark
+python scripts/runner.py --experiment heston_smile_bench
+
+# Run all benchmarks
+python scripts/runner.py --experiment all
+```
+
+### Experiment Infrastructure
+
+**Components:**
+- `src/mc_pricer/experiments/` - Experiment framework with type-safe configurations
+- `ExperimentConfig` - Dataclass capturing all model parameters, simulation settings, and seeds
+- `ExperimentResult` - Complete results with price, stderr, CI, runtime, and full metadata
+- Automatic metadata capture: timestamp, Python version, NumPy version, OS, git commit hash
+
+**Key Features:**
+- ✅ **Deterministic** - Fixed seed ensures bitwise reproducibility
+- ✅ **Grid execution** - Automatically runs over n_paths × seeds × methods
+- ✅ **Metadata tracking** - Every run captures environment and configuration
+- ✅ **JSON export** - Machine-readable results for analysis
+- ✅ **Human summaries** - Aligned tables and paper-ready LaTeX formatting
+
+### Output Artifacts
+
+Results are saved to `results/<experiment_name>/<timestamp>/`:
+
+```
+results/
+├── european_call_bench/
+│   └── 20251228_143052/
+│       ├── results.json       # Machine-readable full data
+│       └── summary.txt         # Human-readable tables
+└── heston_smile_bench/
+    └── 20251228_143214/
+        ├── results.json
+        └── summary.txt
+```
+
+**Example summary.txt:**
+```
+Method                    n_paths     n_steps        Price       Stderr    CI Width  Rel Err %  Runtime (s)
+-----------------------------------------------------------------------------------------------------------
+Plain MC                    10000         N/A    10.457756    0.206847    0.808500     1.9778        0.123
+Antithetic                  10000         N/A    10.468648    0.144236    0.563983     1.3776        0.118
+Control Variate             10000         N/A    10.450584    0.078429    0.306719     0.7505        0.134
+Combined                    10000         N/A    10.450584    0.054721    0.214052     0.5234        0.129
+```
+
+### Regression Testing
+
+Reference values are frozen in `tests/reference_values.json` to prevent regressions:
+
+```bash
+pytest tests/test_regression_reference.py -v
+```
+
+**Tests include:**
+- Black-Scholes analytical values (price, delta, vega)
+- Monte Carlo reproducibility with fixed seeds
+- Variance reduction effectiveness
+- Heston convergence to Black-Scholes limit (ξ=0)
+- American option early exercise premium bounds
+
+Tolerances account for Monte Carlo noise (typically 3×stderr + epsilon).
+
+### Using the Experiment API
+
+```python
+from mc_pricer.experiments import ExperimentConfig, run_experiment, save_results
+from pathlib import Path
+
+# Define experiment
+config = ExperimentConfig(
+    name="atm_call_convergence",
+    model="gbm",
+    option_type="call",
+    style="european",
+    S0=100.0, K=100.0, r=0.05, sigma=0.2, T=1.0,
+    n_paths_list=[1000, 10000, 100000],
+    seeds=[42, 123, 456],
+    antithetic=True,
+    control_variate=True
+)
+
+# Run and save
+results = run_experiment(config)
+save_results(results, Path("results/my_experiment/run001"), config.name)
+```
+
+Each `ExperimentResult` contains:
+- `price`, `stderr`, `ci_lower`, `ci_upper` - Statistical estimates
+- `runtime_seconds` - Wall-clock time
+- `metadata` - Full reproducibility information (seed, versions, git commit, etc.)
+- `greeks` - Optional Greeks data
+- `control_variate_beta` - CV coefficient if applicable
+
+### Paper-Ready Output
+
+The summary includes a LaTeX-friendly table:
+
+```
+PAPER TABLE (Mean ± Stderr [95% CI])
+================================================================================
+Method                         Price (Mean ± SE)                  95% CI
+--------------------------------------------------------------------------------
+Plain MC                       10.457756 ± 0.206847    [10.052336, 10.863176]
+Antithetic                     10.468648 ± 0.144236    [10.185947, 10.751349]
+Control Variate                10.450584 ± 0.078429    [10.296863, 10.604305]
+Combined                       10.450584 ± 0.054721    [10.343332, 10.557836]
+================================================================================
+```
+
+### Best Practices
+
+1. **Always set seeds** for reproducibility
+2. **Run multiple seeds** (e.g., 3-5) to assess stability
+3. **Check git commit** in metadata to track code version
+4. **Save raw JSON** for reanalysis without re-running simulations
+5. **Use reference tests** to catch unintended changes
+
 ## Development
 
 ### Running Linters

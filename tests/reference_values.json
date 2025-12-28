@@ -1,0 +1,124 @@
+{
+  "description": "Frozen reference values for regression testing",
+  "generated": "2025-12-28",
+  "test_cases": {
+    "black_scholes_atm_call": {
+      "description": "Black-Scholes ATM call analytical price",
+      "parameters": {
+        "S0": 100.0,
+        "K": 100.0,
+        "r": 0.05,
+        "sigma": 0.2,
+        "T": 1.0,
+        "option_type": "call"
+      },
+      "reference_price": 10.450583572185565,
+      "reference_delta": 0.6368306511756191,
+      "reference_vega": 37.52403469169379
+    },
+    "gbm_european_call_plain": {
+      "description": "GBM European call with plain Monte Carlo (seed=42)",
+      "parameters": {
+        "S0": 100.0,
+        "K": 100.0,
+        "r": 0.05,
+        "sigma": 0.2,
+        "T": 1.0,
+        "option_type": "call",
+        "n_paths": 50000,
+        "seed": 42,
+        "antithetic": false,
+        "control_variate": false
+      },
+      "reference_price": 10.457756,
+      "tolerance_stderr_multiple": 3.0,
+      "tolerance_absolute": 0.5
+    },
+    "gbm_european_call_antithetic": {
+      "description": "GBM European call with antithetic variates (seed=42)",
+      "parameters": {
+        "S0": 100.0,
+        "K": 100.0,
+        "r": 0.05,
+        "sigma": 0.2,
+        "T": 1.0,
+        "option_type": "call",
+        "n_paths": 50000,
+        "seed": 42,
+        "antithetic": true,
+        "control_variate": false
+      },
+      "reference_price": 10.468648,
+      "expected_stderr_reduction_vs_plain": true
+    },
+    "gbm_european_call_control_variate": {
+      "description": "GBM European call with control variate (seed=42)",
+      "parameters": {
+        "S0": 100.0,
+        "K": 100.0,
+        "r": 0.05,
+        "sigma": 0.2,
+        "T": 1.0,
+        "option_type": "call",
+        "n_paths": 50000,
+        "seed": 42,
+        "antithetic": false,
+        "control_variate": true
+      },
+      "expected_stderr_reduction_vs_plain": true,
+      "expected_beta_nonzero": true
+    },
+    "gbm_pathwise_delta_call": {
+      "description": "Pathwise delta for ATM call",
+      "parameters": {
+        "S0": 100.0,
+        "K": 100.0,
+        "r": 0.05,
+        "sigma": 0.2,
+        "T": 1.0,
+        "option_type": "call",
+        "n_paths": 50000,
+        "seed": 42,
+        "method": "pw"
+      },
+      "reference_delta": 0.636831,
+      "tolerance": 0.05
+    },
+    "heston_black_scholes_limit": {
+      "description": "Heston degeneracy to Black-Scholes (xi=0, v0=theta, rho=0)",
+      "parameters": {
+        "S0": 100.0,
+        "K": 100.0,
+        "r": 0.05,
+        "T": 1.0,
+        "theta": 0.04,
+        "kappa": 2.0,
+        "xi": 0.0,
+        "rho": 0.0,
+        "v0": 0.04,
+        "option_type": "call",
+        "n_paths": 100000,
+        "n_steps": 200,
+        "seed": 42
+      },
+      "black_scholes_price": 10.450583572185565,
+      "tolerance_stderr_multiple": 3.0,
+      "tolerance_absolute_percent": 2.0
+    },
+    "american_put_vs_european": {
+      "description": "American put >= European put",
+      "parameters": {
+        "S0": 100.0,
+        "K": 110.0,
+        "r": 0.05,
+        "sigma": 0.2,
+        "T": 1.0,
+        "option_type": "put",
+        "n_paths": 50000,
+        "n_steps": 50,
+        "seed": 42
+      },
+      "european_put_upper_bound": true
+    }
+  }
+}
