@@ -6,6 +6,8 @@ from typing import Literal
 
 import numpy as np
 
+from mc_pricer.rng.sobol import SobolGenerator, inverse_normal_cdf
+
 
 def sample_variance_qe(
     v: np.ndarray,
@@ -195,7 +197,9 @@ class HestonModel:
         rho: float,
         v0: float,
         seed: int | None = None,
-        scheme: Literal["full_truncation_euler", "qe"] = "full_truncation_euler"
+        scheme: Literal["full_truncation_euler", "qe"] = "full_truncation_euler",
+        rng_type: Literal["pseudo", "sobol"] = "pseudo",
+        scramble: bool = False
     ):
         """
         Initialize Heston model parameters.
@@ -224,6 +228,12 @@ class HestonModel:
             Variance discretization scheme (default: "full_truncation_euler")
             - "full_truncation_euler": Simple explicit Euler with max(v,0) truncation
             - "qe": Andersen's Quadratic-Exponential scheme
+        rng_type : Literal["pseudo", "sobol"], optional
+            Type of random number generator (default: "pseudo")
+            - "pseudo": Standard pseudorandom numbers
+            - "sobol": Quasi-Monte Carlo Sobol sequence
+        scramble : bool, optional
+            Whether to scramble Sobol sequence (only for rng_type="sobol")
         """
         if S0 <= 0:
             raise ValueError("Initial price S0 must be positive")
@@ -255,9 +265,12 @@ class HestonModel:
         self.v0 = v0
         self.seed = seed
         self.scheme = scheme
+        self.rng_type = rng_type
+        self.scramble = scramble
 
         # Initialize random number generator
         self._rng = np.random.default_rng(seed)
+        self._seed = seed
 
     def simulate_paths(
         self,
@@ -312,16 +325,35 @@ class HestonModel:
 
         # Generate correlated random normals
         # z1 for asset price, z2 for variance
-        z1 = self._rng.standard_normal((n_base_paths, n_steps))
-        z2_indep = self._rng.standard_normal((n_base_paths, n_steps))
+        if self.rng_type == "sobol":
+            # Use Sobol sequences for QMC
+            # Need 2*n_steps dimensions: first n_steps for z1, last n_steps for z2_indep
+            sobol = SobolGenerator(
+                dimension=2 * n_steps,
+                seed=self._seed,
+                scramble=self.scramble
+            )
+            U = sobol.generate(n_base_paths, skip=0)
+
+            # If antithetic, extend with 1-U pairing in uniform space
+            if antithetic:
+                U = np.vstack([U, 1.0 - U])
+
+            # Transform to standard normals
+            z1 = inverse_normal_cdf(U[:, :n_steps])
+            z2_indep = inverse_normal_cdf(U[:, n_steps:])
+        else:
+            # Use pseudo-random numbers
+            z1 = self._rng.standard_normal((n_base_paths, n_steps))
+            z2_indep = self._rng.standard_normal((n_base_paths, n_steps))
+
+            # If antithetic, create paired normals
+            if antithetic:
+                z1 = np.vstack([z1, -z1])
+                z2_indep = np.vstack([z2_indep, -z2_indep])
 
         # Correlate z2 with z1: z2 = rho * z1 + sqrt(1 - rho^2) * z2_indep
         z2 = self.rho * z1 + np.sqrt(1 - self.rho**2) * z2_indep
-
-        # If antithetic, create paired normals
-        if antithetic:
-            z1 = np.vstack([z1, -z1])
-            z2 = np.vstack([z2, -z2])
 
         # Initialize arrays
         s = np.zeros((n_paths, n_steps + 1))
