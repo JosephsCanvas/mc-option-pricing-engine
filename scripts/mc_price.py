@@ -20,6 +20,12 @@ from mc_pricer.analytics.black_scholes import bs_delta, bs_gamma, bs_price, bs_v
 from mc_pricer.analytics.implied_vol import implied_vol
 from mc_pricer.models.gbm import GeometricBrownianMotion
 from mc_pricer.models.heston import HestonModel
+from mc_pricer.payoffs.path_dependent import (
+    AsianArithmeticCallPayoff,
+    AsianArithmeticPutPayoff,
+    DownAndOutPutPayoff,
+    UpAndOutCallPayoff,
+)
 from mc_pricer.payoffs.plain_vanilla import EuropeanCallPayoff, EuropeanPutPayoff
 from mc_pricer.pricers.heston_monte_carlo import HestonMonteCarloEngine
 from mc_pricer.pricers.lsm import price_american_lsm
@@ -57,7 +63,11 @@ def parse_args():
     parser.add_argument("--xi", type=float, help="Volatility of volatility (required for Heston)")
     parser.add_argument("--rho", type=float, help="Correlation (required for Heston)")
     parser.add_argument("--v0", type=float, help="Initial variance (required for Heston)")
-    parser.add_argument("--n_steps", type=int, help="Number of time steps (required for Heston)")
+    parser.add_argument(
+        "--n_steps",
+        type=int,
+        help="Number of time steps (required for Heston and path-dependent options)"
+    )
     parser.add_argument(
         "--heston_scheme",
         type=str,
@@ -110,6 +120,13 @@ def parse_args():
 
     # Option parameters
     parser.add_argument(
+        "--product",
+        type=str,
+        choices=["european", "asian", "barrier"],
+        default="european",
+        help="Product type: european, asian, or barrier"
+    )
+    parser.add_argument(
         "--option_type",
         type=str,
         choices=["call", "put"],
@@ -121,7 +138,22 @@ def parse_args():
         type=str,
         choices=["european", "american"],
         default="european",
-        help="Option style: european or american"
+        help="Option style: european or american (applies to vanilla options)"
+    )
+
+    # Barrier option parameters
+    parser.add_argument(
+        "--barrier",
+        type=float,
+        default=None,
+        help="Barrier level (required for barrier options)"
+    )
+    parser.add_argument(
+        "--barrier_type",
+        type=str,
+        choices=["up_out_call", "down_out_put"],
+        default="up_out_call",
+        help="Barrier type: up_out_call or down_out_put"
     )
 
     # American option parameters
@@ -198,6 +230,20 @@ def main():
             print(f"Error: Heston model requires: {', '.join(missing)}")
             sys.exit(1)
 
+    # Validate path-dependent option parameters
+    if args.product in ["asian", "barrier"]:
+        if args.n_steps is None:
+            print(f"Error: --n_steps is required for {args.product} options")
+            sys.exit(1)
+        if args.style == "american":
+            print(f"Error: American style not supported for {args.product} options")
+            sys.exit(1)
+
+    if args.product == "barrier":
+        if args.barrier is None:
+            print("Error: --barrier is required for barrier options")
+            sys.exit(1)
+
     # Print input parameters
     print("=" * 70)
     print("Monte Carlo Option Pricing Engine")
@@ -216,18 +262,23 @@ def main():
         print(f"  Initial Variance (v0):  {args.v0:.4f}")
         print(f"  Scheme:                 {args.heston_scheme}")
     print(f"  Time to Maturity (T):   {args.T:.4f} years")
+    print(f"  Product Type:           {args.product.upper()}")
     print(f"  Option Type:            {args.option_type.upper()}")
-    print(f"  Option Style:           {args.style.upper()}")
+    if args.product == "european":
+        print(f"  Option Style:           {args.style.upper()}")
+    if args.product == "barrier":
+        print(f"  Barrier Level:          {args.barrier:,.2f}")
+        print(f"  Barrier Type:           {args.barrier_type}")
     print(f"  Model:                  {args.model.upper()}")
     print("\nSimulation Parameters:")
     print(f"  Number of Paths:        {args.n_paths:,}")
-    if args.model == "heston":
+    if args.product in ["asian", "barrier"] or args.model == "heston":
         print(f"  Time Steps:             {args.n_steps}")
     if args.style == "american":
         print(f"  LSM Time Steps:         {args.lsm_steps}")
         print(f"  LSM Basis Functions:    {args.lsm_basis}")
     print(f"  Antithetic Variates:    {args.antithetic}")
-    if args.style == "european" and args.model == "gbm":
+    if args.product == "european" and args.style == "european" and args.model == "gbm":
         print(f"  Control Variate:        {args.control_variate}")
     print(f"  Random Seed:            {args.seed if args.seed is not None else 'None (random)'}")
     print(f"  RNG Type:               {args.rng.upper()}")
@@ -252,6 +303,18 @@ def main():
             if args.style == "american":
                 print("\nPlease use GBM model for American options.")
                 sys.exit(1)
+
+    # Check for incompatible features with path-dependent options
+    if args.product in ["asian", "barrier"]:
+        warnings = []
+        if args.control_variate:
+            warnings.append(f"Control variate not supported for {args.product} options")
+        if args.greeks != "none":
+            warnings.append(f"Greeks not supported for {args.product} options")
+        if warnings:
+            print("\n⚠ Warnings:")
+            for warning in warnings:
+                print(f"  • {warning}")
 
     # Create model
     if args.model == "gbm":
@@ -284,6 +347,65 @@ def main():
     print("\n" + "=" * 70)
     print("Pricing...")
     print("=" * 70)
+
+    # Path-dependent option pricing (Asian or Barrier)
+    if args.product in ["asian", "barrier"]:
+        if args.bs or args.implied_vol is not None:
+            print("Note: Black-Scholes and implied volatility are European-only features")
+
+        # Create payoff
+        if args.product == "asian":
+            if args.option_type == "call":
+                payoff = AsianArithmeticCallPayoff(strike=args.K)
+            else:
+                payoff = AsianArithmeticPutPayoff(strike=args.K)
+        else:  # barrier
+            if args.barrier_type == "up_out_call":
+                payoff = UpAndOutCallPayoff(strike=args.K, barrier=args.barrier)
+            else:  # down_out_put
+                payoff = DownAndOutPutPayoff(strike=args.K, barrier=args.barrier)
+
+        # Create pricing engine
+        if args.model == "gbm":
+            engine = MonteCarloEngine(
+                model=model,
+                payoff=payoff,
+                n_paths=args.n_paths,
+                antithetic=args.antithetic,
+                control_variate=False  # Never use CV for path-dependent
+            )
+        else:  # heston
+            engine = HestonMonteCarloEngine(
+                model=model,
+                payoff=payoff,
+                n_paths=args.n_paths,
+                n_steps=args.n_steps,
+                antithetic=args.antithetic,
+                seed=args.seed
+            )
+
+        # Price path-dependent option
+        result = engine.price_path_dependent(
+            n_steps=args.n_steps,
+            rng_type=args.rng,
+            scramble=args.scramble,
+            qmc_dim_override=args.qmc_dim_override
+        )
+
+        # Print results
+        print(f"\nResults ({args.product.capitalize()}):")
+        print(f"  Option Price:           {result.price:.6f}")
+        print(f"  Standard Error:         {result.stderr:.6f}")
+        print(f"  95% Confidence Interval: [{result.ci_lower:.6f}, {result.ci_upper:.6f}]")
+        print(f"  CI Width:               {result.ci_upper - result.ci_lower:.6f}")
+        print(f"  Relative Error (σ/μ):   {result.stderr / result.price * 100:.4f}%")
+        print(f"  Time Steps Used:        {result.n_steps}")
+        print(f"  RNG Type:               {result.rng_type.upper()}")
+        if result.rng_type == "sobol":
+            print(f"  Scrambling:             {result.scramble}")
+
+        print("\n" + "=" * 70)
+        return
 
     if args.style == "american":
         # American option pricing with LSM

@@ -8,12 +8,22 @@ A production-grade Monte Carlo simulation engine for pricing financial derivativ
 
 ## Features
 
-- **Geometric Brownian Motion (GBM)** asset price simulation with vectorized implementation
-- **European Options** (call/put) with analytical payoff functions
-- **Monte Carlo Pricing Engine** with:
-  - Variance reduction via **antithetic variates** and **control variates** (~62% stderr reduction)
+- **Asset Price Models:**
+  - **Geometric Brownian Motion (GBM)** with vectorized implementation
+  - **Heston Stochastic Volatility** with Full Truncation Euler and QE schemes
+- **Option Types:**
+  - **European Options** (call/put) with analytical payoff functions
+  - **American Options** via Least Squares Monte Carlo (LSM)
+  - **Asian Options** (arithmetic average, call/put)
+  - **Barrier Options** (up-and-out call, down-and-out put)
+- **Monte Carlo Engine:**
+  - **Quasi-Monte Carlo (QMC)** with Sobol sequences (up to 21 dimensions)
+  - Variance reduction: **antithetic variates** and **control variates** (~62% stderr reduction)
   - Statistical confidence intervals (95% CI)
   - Deterministic reproducibility (seed control)
+- **Greeks Computation:**
+  - **Pathwise** (automatic differentiation-style)
+  - **Finite Difference** (bump-and-revalue)
 - **Validation Suite** comparing MC prices to Black-Scholes closed-form solutions
 - **Type-safe** code with full type hints and input validation
 - **CI/CD Pipeline** with GitHub Actions (Python 3.10/3.11/3.12)
@@ -533,6 +543,154 @@ python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 \
 ```
 
 **Warning**: Only use this if you understand the implications. Incorrect dimensions can lead to biased results.
+
+## Path-Dependent Options
+
+The engine supports **Asian** and **Barrier** options, which require full path simulation to compute payoffs based on intermediate price levels.
+
+### Asian Options (Arithmetic Average)
+
+Asian options have payoffs based on the arithmetic average of the underlying price over the option's life:
+
+- **Asian Arithmetic Call**: `max(average(S_path) - K, 0)`
+- **Asian Arithmetic Put**: `max(K - average(S_path), 0)`
+
+These options exhibit **lower variance** than vanilla options due to the averaging effect, making them popular for hedging purposes.
+
+#### Usage Example
+
+```python
+from mc_pricer.models.gbm import GeometricBrownianMotion
+from mc_pricer.payoffs.path_dependent import AsianArithmeticCallPayoff
+from mc_pricer.pricers.monte_carlo import MonteCarloEngine
+
+# Create model
+model = GeometricBrownianMotion(S0=100.0, r=0.05, sigma=0.2, T=1.0, seed=42)
+
+# Create Asian call payoff
+payoff = AsianArithmeticCallPayoff(strike=100.0)
+
+# Create engine
+engine = MonteCarloEngine(
+    model=model,
+    payoff=payoff,
+    n_paths=10000,
+    antithetic=True  # Antithetic works well with path-dependent options
+)
+
+# Price using path-dependent pricing method
+result = engine.price_path_dependent(
+    n_steps=20,         # Number of time steps for averaging
+    rng_type="pseudo"   # or "sobol" for QMC (max 21 steps for Sobol)
+)
+
+print(f"Asian Call Price: {result.price:.6f} ± {result.stderr:.6f}")
+print(f"Time Steps: {result.n_steps}")
+```
+
+#### CLI Usage
+
+```bash
+# Asian call with pseudo-random
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 \
+    --product asian --option_type call --n_steps 20 --n_paths 10000
+
+# Asian put with Sobol QMC
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 \
+    --product asian --option_type put --n_steps 20 --n_paths 10000 \
+    --rng sobol --scramble
+
+# Asian with antithetic variates
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 \
+    --product asian --option_type call --n_steps 20 --n_paths 10000 --antithetic
+```
+
+#### Demo Script
+
+Run the Asian option convergence analysis:
+
+```bash
+python scripts/asian_demo.py
+```
+
+This demonstrates convergence across different path counts and compares pseudo-random vs Sobol QMC performance.
+
+### Barrier Options (Knock-Out)
+
+Barrier options are activated or deactivated when the underlying price crosses a barrier level during the option's life:
+
+- **Up-and-Out Call**: Knocked out if `max(S_path) >= barrier`, otherwise pays like a vanilla call
+- **Down-and-Out Put**: Knocked out if `min(S_path) <= barrier`, otherwise pays like a vanilla put
+
+These options are always **cheaper than vanilla options** due to the knock-out risk.
+
+#### Usage Example
+
+```python
+from mc_pricer.models.gbm import GeometricBrownianMotion
+from mc_pricer.payoffs.path_dependent import UpAndOutCallPayoff
+from mc_pricer.pricers.monte_carlo import MonteCarloEngine
+
+# Create model
+model = GeometricBrownianMotion(S0=100.0, r=0.05, sigma=0.2, T=1.0, seed=42)
+
+# Create up-and-out call payoff
+payoff = UpAndOutCallPayoff(strike=100.0, barrier=120.0)
+
+# Create engine
+engine = MonteCarloEngine(model=model, payoff=payoff, n_paths=50000)
+
+# Price using path-dependent pricing
+result = engine.price_path_dependent(n_steps=50, rng_type="pseudo")
+
+print(f"Barrier Call Price: {result.price:.6f} ± {result.stderr:.6f}")
+print(f"Barrier Level: 120.0")
+```
+
+#### CLI Usage
+
+```bash
+# Up-and-out call with barrier=120
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 \
+    --product barrier --barrier_type up_out_call --barrier 120 \
+    --n_steps 50 --n_paths 50000
+
+# Down-and-out put with barrier=80
+python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 \
+    --product barrier --barrier_type down_out_put --barrier 80 \
+    --n_steps 50 --n_paths 50000 --seed 42
+```
+
+#### Demo Script
+
+Run the barrier option analysis:
+
+```bash
+python scripts/barrier_demo.py
+```
+
+This demonstrates:
+- Barrier price vs vanilla price comparison
+- Knock-out rates for different barrier levels
+- Relationship between barrier level and option value
+
+### Path-Dependent Options: Key Points
+
+**QMC Dimension Limits:**
+- Sobol sequences support up to 21 dimensions
+- For path-dependent options: dimension = n_steps
+- Use `n_steps <= 21` for Sobol QMC
+- Use `n_steps > 21` with pseudo-random or reduce steps
+
+**Variance Reduction:**
+- **Antithetic variates**: ✅ Works well with path-dependent options
+- **Control variates**: ❌ Not supported (only works for terminal payoffs)
+
+**Important Notes:**
+- Path-dependent options require more time steps for accurate barrier monitoring
+- Asian options benefit from averaging (lower variance than vanilla)
+- Barrier options are always ≤ vanilla options (knock-out risk)
+- Use `price_path_dependent()` method instead of `price()` for path-dependent payoffs
 
 ## Roadmap
 

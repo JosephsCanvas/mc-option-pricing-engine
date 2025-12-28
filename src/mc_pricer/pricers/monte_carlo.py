@@ -54,6 +54,34 @@ class PricingResult:
         return base
 
 
+@dataclass
+class PathDependentPricingResult(PricingResult):
+    """
+    Container for path-dependent Monte Carlo pricing results.
+
+    Extends PricingResult with additional metadata specific to path-dependent options.
+    """
+    n_steps: int = 0
+    rng_type: str = "pseudo"
+    scramble: bool = False
+
+    def __repr__(self) -> str:
+        base = (
+            f"PathDependentPricingResult(\n"
+            f"  price={self.price:.6f},\n"
+            f"  stderr={self.stderr:.6f},\n"
+            f"  CI95=[{self.ci_lower:.6f}, {self.ci_upper:.6f}],\n"
+            f"  n_paths={self.n_paths},\n"
+            f"  n_steps={self.n_steps},\n"
+            f"  rng_type='{self.rng_type}',\n"
+            f"  scramble={self.scramble}"
+        )
+        if self.control_variate_beta is not None:
+            base += f",\n  control_variate_beta={self.control_variate_beta:.6f}"
+        base += "\n)"
+        return base
+
+
 class MonteCarloEngine:
     """
     Monte Carlo pricing engine for European options.
@@ -220,6 +248,99 @@ class MonteCarloEngine:
         )
 
         return result, discounted_payoffs
+
+    def price_path_dependent(
+        self,
+        n_steps: int,
+        rng_type: str = "pseudo",
+        scramble: bool = False,
+        qmc_dim_override: int | None = None
+    ) -> PathDependentPricingResult:
+        """
+        Price path-dependent options using full path simulation.
+
+        This method simulates full price paths and computes payoffs based on
+        the entire path history (e.g., Asian options, Barrier options).
+
+        Parameters
+        ----------
+        n_steps : int
+            Number of time steps in each path
+        rng_type : str, optional
+            Random number generator type: "pseudo" or "sobol" (default: "pseudo")
+        scramble : bool, optional
+            Whether to use digital shift scrambling for Sobol sequences (default: False)
+        qmc_dim_override : int | None, optional
+            Override dimension for QMC (advanced users only, default: None)
+
+        Returns
+        -------
+        PathDependentPricingResult
+            Pricing results with path-dependent metadata
+
+        Notes
+        -----
+        Control variate variance reduction is NOT applied for path-dependent options
+        as the terminal stock control variate is only valid for terminal payoffs.
+        Antithetic variance reduction works with path simulation.
+
+        For QMC, the dimension is n_steps for GBM (or 2*n_steps for Heston).
+        Ensure n_steps <= 21 for Sobol unless using dimension override.
+        """
+        if n_steps <= 0:
+            raise ValueError("n_steps must be positive")
+
+        # Temporarily override model RNG settings if specified
+        original_rng_type = self.model.rng_type
+        original_scramble = self.model.scramble
+
+        try:
+            # Set RNG type for path simulation
+            self.model.rng_type = rng_type
+            self.model.scramble = scramble
+
+            # Simulate full paths
+            paths = self.model.simulate_paths(
+                n_paths=self.n_paths,
+                n_steps=n_steps,
+                antithetic=self.antithetic
+            )
+
+            # Compute payoffs from paths
+            payoffs = self.payoff(paths)
+
+            # Discount to present value
+            discount_factor = np.exp(-self.model.r * self.model.T)
+            discounted_payoffs = discount_factor * payoffs
+
+            # Note: Control variate is NOT applied for path-dependent options
+            # The terminal stock CV only works for terminal payoffs
+
+            # Compute statistics
+            price = np.mean(discounted_payoffs)
+            stderr = np.std(discounted_payoffs, ddof=1) / np.sqrt(self.n_paths)
+
+            # 95% confidence interval
+            z_critical = 1.96
+            ci_lower = price - z_critical * stderr
+            ci_upper = price + z_critical * stderr
+
+            return PathDependentPricingResult(
+                price=price,
+                stderr=stderr,
+                ci_lower=ci_lower,
+                ci_upper=ci_upper,
+                n_paths=self.n_paths,
+                n_steps=n_steps,
+                rng_type=rng_type,
+                scramble=scramble,
+                control_variate_beta=None
+            )
+
+        finally:
+            # Restore original RNG settings
+            self.model.rng_type = original_rng_type
+            self.model.scramble = original_scramble
 
     def compute_greeks(
         self,
