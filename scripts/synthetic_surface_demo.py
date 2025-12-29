@@ -8,7 +8,6 @@ Outputs JSON artifact with git metadata for reproducible research.
 """
 
 import argparse
-from pathlib import Path
 
 import numpy as np
 

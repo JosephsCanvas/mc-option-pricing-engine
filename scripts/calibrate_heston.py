@@ -103,8 +103,14 @@ def calibrate_from_csv(
     # Show quote summary
     strikes = sorted(set(q.strike for q in quotes))
     maturities = sorted(set(q.maturity for q in quotes))
-    print(f"Unique strikes: {len(strikes)} (range: {min(strikes):.2f} - {max(strikes):.2f})")
-    print(f"Unique maturities: {len(maturities)} (range: {min(maturities):.2f} - {max(maturities):.2f})")
+    print(
+        f"Unique strikes: {len(strikes)} "
+        f"(range: {min(strikes):.2f} - {max(strikes):.2f})"
+    )
+    print(
+        f"Unique maturities: {len(maturities)} "
+        f"(range: {min(maturities):.2f} - {max(maturities):.2f})"
+    )
     print()
 
     # Configure based on mode

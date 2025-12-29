@@ -1,6 +1,5 @@
 """Tests for Heston calibration with CRN and caching."""
 
-import numpy as np
 import pytest
 
 from mc_pricer.calibration import (
@@ -118,7 +117,6 @@ def test_cache_hit_rate(simple_quotes, calibrator_params):
 
     # With CRN and multiple restarts, should get some cache hits
     total_calls = result.cache_hits + result.cache_misses
-    hit_rate = result.cache_hits / total_calls if total_calls > 0 else 0
 
     # Should get at least some hits (not super strict since it's stochastic)
     assert total_calls > 0
@@ -139,7 +137,7 @@ def test_cache_size_limit(simple_quotes, calibrator_params):
     calibrator = HestonCalibrator(
         **calibrator_params, quotes=simple_quotes, config=config
     )
-    result = calibrator.calibrate()
+    calibrator.calibrate()
 
     # Cache should not exceed size limit
     assert len(calibrator._cache) <= config.cache_size
@@ -310,13 +308,6 @@ def test_regularization(simple_quotes, calibrator_params):
 
     # With regularization, objective includes penalty
     # So it might be slightly higher
-    # But parameters should be somewhat different
-    params_differ = any(
-        abs(result_no_reg.best_params[param] - result_with_reg.best_params[param])
-        > 0.01
-        for param in ["kappa", "theta", "xi", "rho", "v0"]
-    )
-    # Not strictly required to differ, but likely
     # Just check both ran successfully
     assert result_no_reg.n_evals > 0
     assert result_with_reg.n_evals > 0
