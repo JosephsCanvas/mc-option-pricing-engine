@@ -1,0 +1,78 @@
+{
+  "data": {
+    "experiment": "synthetic_surface_calibration",
+    "mode": "fast",
+    "true_parameters": {
+      "kappa": 2.0,
+      "theta": 0.04,
+      "xi": 0.3,
+      "rho": -0.7,
+      "v0": 0.04
+    },
+    "fitted_parameters": {
+      "kappa": 0.468429847015302,
+      "theta": 0.059350744117058964,
+      "xi": 0.34125404953260696,
+      "rho": -0.4875386926834075,
+      "v0": 0.039476017034623216
+    },
+    "objective_value": 0.0028405567828893308,
+    "runtime_sec": 25.041426420211792,
+    "n_evals": 86,
+    "cache_hits": 6,
+    "cache_misses": 516,
+    "config": {
+      "n_paths": 10000,
+      "n_steps": 50,
+      "n_restarts": 1,
+      "use_crn": true,
+      "cache_size": 1000
+    },
+    "grid": {
+      "n_strikes": 3,
+      "n_maturities": 2,
+      "n_quotes": 6
+    },
+    "fitted_vols": [
+      0.2191014370791186,
+      0.19710701090621016,
+      0.1814699776206631,
+      0.21833585282299853,
+      0.19894329925932175,
+      0.18388683372422496
+    ],
+    "target_vols": [
+      0.22158495723923857,
+      0.20006908176236043,
+      0.17806796869470368,
+      0.21413590550114772,
+      0.19974259738590008,
+      0.1859357988579404
+    ],
+    "residuals": [
+      -0.002483520160119962,
+      -0.002962070856150273,
+      0.003402008925959432,
+      0.0041999473218508054,
+      -0.000799298126578335,
+      -0.0020489651337154413
+    ]
+  },
+  "metadata": {
+    "timestamp": "2025-12-29T17:30:55.797139",
+    "git": {
+      "commit": "416b31f27912ad847bd673251a15b3ec136e133a",
+      "branch": "feat/research-performance-repro",
+      "dirty": true
+    },
+    "environment": {
+      "python_version": "3.12.6",
+      "numpy_version": "2.3.5",
+      "platform": {
+        "system": "Windows",
+        "release": "11",
+        "machine": "AMD64"
+      }
+    }
+  }
+}

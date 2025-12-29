@@ -4,10 +4,13 @@ This module provides research-grade calibration of Heston stochastic volatility
 model parameters to match target implied volatilities across strikes and maturities.
 
 Implementation uses numpy-only optimization (Nelder-Mead with random restarts)
-for reproducibility and transparency.
+for reproducibility and transparency. Includes Common Random Numbers (CRN) and
+caching for improved performance while maintaining deterministic results.
 """
 
+import hashlib
 import time
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -84,6 +87,10 @@ class CalibrationConfig:
         Heston discretization scheme ('full_truncation_euler' or 'qe').
     regularization : float
         L2 penalty coefficient for parameter magnitude (default 0.0).
+    use_crn : bool
+        Use Common Random Numbers for variance reduction (default False).
+    cache_size : int
+        Maximum number of cached pricing results (default 1000).
     """
 
     n_paths: int = 10000
@@ -93,15 +100,19 @@ class CalibrationConfig:
     seeds: list[int] = field(default_factory=lambda: [42])
     max_iter: int = 200
     tol: float = 1e-6
-    bounds: dict[str, tuple[float, float]] = field(default_factory=lambda: {
-        "kappa": (0.01, 10.0),
-        "theta": (0.001, 1.0),
-        "xi": (0.01, 2.0),
-        "rho": (-0.999, 0.999),
-        "v0": (0.001, 1.0),
-    })
+    bounds: dict[str, tuple[float, float]] = field(
+        default_factory=lambda: {
+            "kappa": (0.01, 10.0),
+            "theta": (0.001, 1.0),
+            "xi": (0.01, 2.0),
+            "rho": (-0.999, 0.999),
+            "v0": (0.001, 1.0),
+        }
+    )
     heston_scheme: str = "full_truncation_euler"
     regularization: float = 0.0
+    use_crn: bool = False
+    cache_size: int = 1000
 
     def __post_init__(self):
         """Validate configuration."""
@@ -119,6 +130,8 @@ class CalibrationConfig:
             raise ValueError("tol must be positive")
         if self.regularization < 0:
             raise ValueError("regularization must be non-negative")
+        if self.cache_size < 0:
+            raise ValueError("cache_size must be non-negative")
 
 
 @dataclass
@@ -143,6 +156,10 @@ class CalibrationResult:
         Target implied volatilities from market quotes.
     residuals : list[float]
         Differences: fitted_vols - target_vols.
+    cache_hits : int
+        Number of cache hits (if caching enabled).
+    cache_misses : int
+        Number of cache misses (if caching enabled).
     """
 
     best_params: dict[str, float]
@@ -153,6 +170,8 @@ class CalibrationResult:
     fitted_vols: list[float]
     target_vols: list[float]
     residuals: list[float]
+    cache_hits: int = 0
+    cache_misses: int = 0
 
 
 class HestonCalibrator:
@@ -160,6 +179,9 @@ class HestonCalibrator:
 
     Uses Nelder-Mead simplex algorithm with random restarts.
     All operations use numpy only (no scipy dependency).
+
+    Supports Common Random Numbers (CRN) and result caching for
+    improved performance while maintaining determinism.
 
     Parameters
     ----------
@@ -191,6 +213,11 @@ class HestonCalibrator:
         self.quotes = quotes
         self.config = config
         self.n_evals = 0
+        self.cache_hits = 0
+        self.cache_misses = 0
+
+        # LRU cache for pricing results: (seed, K, T, params_hash) -> (price, iv)
+        self._cache: OrderedDict[tuple, tuple[float, float]] = OrderedDict()
 
         # Compute weights from bid-ask spreads
         self.weights = self._compute_weights()
@@ -231,6 +258,78 @@ class HestonCalibrator:
                 lb, ub = self.config.bounds[name]
                 bounded[i] = np.clip(bounded[i], lb, ub)
         return bounded
+
+    def _params_hash(self, params_dict: dict[str, float]) -> str:
+        """Compute hash of parameters for caching."""
+        # Round to reasonable precision for hash stability
+        param_str = ",".join(
+            f"{name}={params_dict[name]:.8f}" for name in self.param_names
+        )
+        return hashlib.md5(param_str.encode()).hexdigest()[:16]
+
+    def _get_cached_or_price(
+        self,
+        params_dict: dict[str, float],
+        quote: MarketQuote,
+        seed: int,
+    ) -> tuple[float, float]:
+        """Get cached result or price option.
+
+        Returns
+        -------
+        tuple
+            (price, implied_vol)
+        """
+        if not self.config.use_crn or self.config.cache_size == 0:
+            # No caching
+            price = self._price_option(params_dict, quote, seed)
+            try:
+                iv = implied_vol(
+                    price=price,
+                    S0=self.S0,
+                    K=quote.strike,
+                    r=self.r,
+                    T=quote.maturity,
+                    option_type=quote.option_type,
+                )
+                return price, iv
+            except (ValueError, RuntimeError):
+                return price, np.nan
+
+        # Try cache
+        params_hash = self._params_hash(params_dict)
+        cache_key = (seed, quote.strike, quote.maturity, params_hash)
+
+        if cache_key in self._cache:
+            self.cache_hits += 1
+            # Move to end (LRU)
+            self._cache.move_to_end(cache_key)
+            return self._cache[cache_key]
+
+        # Cache miss - compute
+        self.cache_misses += 1
+        price = self._price_option(params_dict, quote, seed)
+
+        try:
+            iv = implied_vol(
+                price=price,
+                S0=self.S0,
+                K=quote.strike,
+                r=self.r,
+                T=quote.maturity,
+                option_type=quote.option_type,
+            )
+        except (ValueError, RuntimeError):
+            iv = np.nan
+
+        # Add to cache
+        self._cache[cache_key] = (price, iv)
+
+        # Enforce cache size limit
+        if len(self._cache) > self.config.cache_size:
+            self._cache.popitem(last=False)  # Remove oldest
+
+        return price, iv
 
     def _price_option(
         self,
@@ -283,23 +382,8 @@ class HestonCalibrator:
         fitted_vols = []
 
         for quote in self.quotes:
-            # Price option
-            price = self._price_option(params_dict, quote, seed)
-
-            # Convert to implied vol
-            try:
-                iv = implied_vol(
-                    price=price,
-                    S0=self.S0,
-                    K=quote.strike,
-                    r=self.r,
-                    T=quote.maturity,
-                    option_type=quote.option_type,
-                )
-                fitted_vols.append(iv)
-            except (ValueError, RuntimeError):
-                # If implied vol fails, use large penalty
-                fitted_vols.append(np.nan)
+            _, iv = self._get_cached_or_price(params_dict, quote, seed)
+            fitted_vols.append(iv)
 
         return fitted_vols
 
@@ -346,10 +430,12 @@ class HestonCalibrator:
         # Add regularization penalty
         if self.config.regularization > 0:
             # L2 penalty on normalized parameters
-            param_scales = np.array([
-                self.config.bounds[name][1] - self.config.bounds[name][0]
-                for name in self.param_names
-            ])
+            param_scales = np.array(
+                [
+                    self.config.bounds[name][1] - self.config.bounds[name][0]
+                    for name in self.param_names
+                ]
+            )
             normalized_params = params / param_scales
             l2_penalty = self.config.regularization * np.sum(normalized_params**2)
             rmse += l2_penalty
@@ -378,7 +464,7 @@ class HestonCalibrator:
         # Nelder-Mead parameters
         alpha = 1.0  # Reflection
         gamma = 2.0  # Expansion
-        rho = 0.5    # Contraction
+        rho = 0.5  # Contraction
         sigma = 0.5  # Shrink
 
         n = len(x0)
@@ -400,7 +486,7 @@ class HestonCalibrator:
 
         history = [float(np.min(f_values))]
 
-        for iteration in range(self.config.max_iter):
+        for _ in range(self.config.max_iter):
             # Sort simplex by objective value
             order = np.argsort(f_values)
             simplex = simplex[order]
@@ -460,7 +546,9 @@ class HestonCalibrator:
 
         return simplex[0], f_values[0], history
 
-    def calibrate(self, initial_guess: dict[str, float] | None = None) -> CalibrationResult:
+    def calibrate(
+        self, initial_guess: dict[str, float] | None = None
+    ) -> CalibrationResult:
         """Run calibration with random restarts.
 
         Parameters
@@ -475,6 +563,9 @@ class HestonCalibrator:
         """
         start_time = time.time()
         self.n_evals = 0
+        self.cache_hits = 0
+        self.cache_misses = 0
+        self._cache.clear()
 
         # Set initial guess
         if initial_guess is None:
@@ -499,20 +590,26 @@ class HestonCalibrator:
             else:
                 # Subsequent runs: random restart within bounds
                 rng = np.random.default_rng(seed)
-                x_init = np.array([
-                    rng.uniform(bounds[0], bounds[1])
-                    for name, bounds in [(n, self.config.bounds[n]) for n in self.param_names]
-                ])
+                x_init = np.array(
+                    [
+                        rng.uniform(bounds[0], bounds[1])
+                        for name, bounds in [
+                            (n, self.config.bounds[n]) for n in self.param_names
+                        ]
+                    ]
+                )
 
             # Run optimization
             params, value, history = self._nelder_mead(x_init, seed)
             all_histories.append(history)
-            restart_results.append({
-                "seed": seed,
-                "final_value": float(value),
-                "n_iterations": len(history),
-                "params": self._params_to_dict(params),
-            })
+            restart_results.append(
+                {
+                    "seed": seed,
+                    "final_value": float(value),
+                    "n_iterations": len(history),
+                    "params": self._params_to_dict(params),
+                }
+            )
 
             # Update best
             if value < best_value:
@@ -523,7 +620,9 @@ class HestonCalibrator:
 
         # Compute final fitted vols and residuals
         best_params_dict = self._params_to_dict(best_params)
-        fitted_vols = self._compute_fitted_vols(best_params_dict, self.config.seeds[0])
+        fitted_vols = self._compute_fitted_vols(
+            best_params_dict, self.config.seeds[0]
+        )
         target_vols = [q.implied_vol for q in self.quotes]
         residuals = [
             fv - tv if not np.isnan(fv) else np.nan
@@ -545,6 +644,8 @@ class HestonCalibrator:
                 "heston_scheme": self.config.heston_scheme,
                 "max_iter": self.config.max_iter,
                 "tol": self.config.tol,
+                "use_crn": self.config.use_crn,
+                "cache_size": self.config.cache_size,
             },
         }
 
@@ -557,4 +658,6 @@ class HestonCalibrator:
             fitted_vols=fitted_vols,
             target_vols=target_vols,
             residuals=residuals,
+            cache_hits=self.cache_hits,
+            cache_misses=self.cache_misses,
         )

@@ -1,336 +1,303 @@
-"""Command-line interface for Heston calibration.
+"""Command-line tool for Heston model calibration.
 
-Calibrate Heston model parameters to a volatility surface specified
-via command-line arguments or input file.
+Reads market quotes from CSV and calibrates Heston parameters.
+Supports fast mode for quick iteration and full mode for production.
+Outputs reproducible JSON artifacts with git metadata.
+
+CSV format:
+    strike,maturity,option_type,implied_vol,bid_ask_width
+    95.0,0.25,call,0.25,0.005
+    100.0,0.25,call,0.22,0.004
+    ...
+
+Example usage:
+    # Fast mode (<30s) for iteration
+    python scripts/calibrate_heston.py data/quotes.csv --fast --out results/calib_fast.json
+
+    # Full mode for production
+    python scripts/calibrate_heston.py data/quotes.csv --out results/calib_full.json
 """
 
 import argparse
-import json
-import sys
+import csv
 from pathlib import Path
 
-import numpy as np
-
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from mc_pricer.calibration import CalibrationConfig, HestonCalibrator, MarketQuote
-
-
-def parse_args():
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Calibrate Heston model to implied volatility surface"
-    )
-
-    # Market parameters
-    parser.add_argument("--S0", type=float, required=True, help="Spot price")
-    parser.add_argument("--r", type=float, required=True, help="Risk-free rate")
-
-    # Surface specification
-    parser.add_argument(
-        "--quotes_file",
-        type=str,
-        default=None,
-        help="JSON file with market quotes (overrides --strikes/--maturities/--vols)",
-    )
-    parser.add_argument(
-        "--strikes",
-        type=float,
-        nargs="+",
-        help="Strike prices (required if no --quotes_file)",
-    )
-    parser.add_argument(
-        "--maturities",
-        type=float,
-        nargs="+",
-        help="Maturities in years (required if no --quotes_file)",
-    )
-    parser.add_argument(
-        "--vols",
-        type=float,
-        nargs="+",
-        help="Implied vols (flattened grid: K1T1, K2T1, ..., required if no --quotes_file)",
-    )
-
-    # Calibration config
-    parser.add_argument(
-        "--n_paths", type=int, default=10000, help="Number of MC paths"
-    )
-    parser.add_argument(
-        "--n_steps", type=int, default=50, help="Number of time steps"
-    )
-    parser.add_argument(
-        "--rng",
-        type=str,
-        choices=["pseudo", "sobol"],
-        default="pseudo",
-        help="RNG type",
-    )
-    parser.add_argument("--scramble", action="store_true", help="Use Sobol scrambling")
-    parser.add_argument(
-        "--seeds",
-        type=int,
-        nargs="+",
-        default=[42],
-        help="Random seeds for restarts",
-    )
-    parser.add_argument(
-        "--max_iter", type=int, default=200, help="Max iterations per restart"
-    )
-    parser.add_argument("--tol", type=float, default=1e-6, help="Convergence tolerance")
-    parser.add_argument(
-        "--heston_scheme",
-        type=str,
-        choices=["full_truncation_euler", "qe"],
-        default="qe",
-        help="Heston discretization scheme",
-    )
-
-    # Initial guess
-    parser.add_argument("--kappa_init", type=float, default=2.0, help="Initial kappa")
-    parser.add_argument("--theta_init", type=float, default=0.04, help="Initial theta")
-    parser.add_argument("--xi_init", type=float, default=0.3, help="Initial xi")
-    parser.add_argument("--rho_init", type=float, default=-0.7, help="Initial rho")
-    parser.add_argument("--v0_init", type=float, default=0.04, help="Initial v0")
-
-    # Output
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="calibration_result.json",
-        help="Output JSON file",
-    )
-
-    return parser.parse_args()
+from mc_pricer.calibration import (
+    CalibrationConfig,
+    HestonCalibrator,
+    MarketQuote,
+)
+from mc_pricer.experiments.artifacts import save_artifact
 
 
-def load_quotes_from_file(filename: str) -> list[MarketQuote]:
-    """Load market quotes from JSON file.
+def load_quotes_from_csv(csv_path: str) -> list[MarketQuote]:
+    """Load market quotes from CSV file.
 
-    Expected format:
-    {
-        "quotes": [
-            {"strike": 100, "maturity": 1.0, "option_type": "call", "implied_vol": 0.2},
-            ...
-        ]
-    }
+    Parameters
+    ----------
+    csv_path : str
+        Path to CSV file with columns: strike, maturity, option_type,
+        implied_vol, bid_ask_width (optional).
+
+    Returns
+    -------
+    list[MarketQuote]
+        Parsed market quotes.
     """
-    with open(filename) as f:
-        data = json.load(f)
-
     quotes = []
-    for q in data["quotes"]:
-        quotes.append(
-            MarketQuote(
-                strike=q["strike"],
-                maturity=q["maturity"],
-                option_type=q["option_type"],
-                implied_vol=q["implied_vol"],
-                bid_ask_width=q.get("bid_ask_width"),
+
+    with open(csv_path) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            strike = float(row["strike"])
+            maturity = float(row["maturity"])
+            option_type = row["option_type"].lower()
+            implied_vol = float(row["implied_vol"])
+
+            # Bid-ask width is optional
+            bid_ask_width = (
+                float(row["bid_ask_width"]) if "bid_ask_width" in row else None
             )
-        )
 
-    return quotes
-
-
-def create_quotes_from_grid(
-    strikes: list[float],
-    maturities: list[float],
-    vols: list[float],
-) -> list[MarketQuote]:
-    """Create quotes from strike/maturity/vol grid.
-
-    Vols should be flattened in order: all strikes for T1, then all strikes for T2, etc.
-    """
-    if len(vols) != len(strikes) * len(maturities):
-        raise ValueError(
-            f"Expected {len(strikes) * len(maturities)} vols, got {len(vols)}"
-        )
-
-    quotes = []
-    idx = 0
-    for T in maturities:
-        for K in strikes:
             quotes.append(
                 MarketQuote(
-                    strike=K,
-                    maturity=T,
-                    option_type="call",
-                    implied_vol=vols[idx],
+                    strike=strike,
+                    maturity=maturity,
+                    option_type=option_type,
+                    implied_vol=implied_vol,
+                    bid_ask_width=bid_ask_width,
                 )
             )
-            idx += 1
 
     return quotes
 
 
-def main():
-    """Run calibration from command line."""
-    args = parse_args()
+def calibrate_from_csv(
+    csv_path: str,
+    S0: float,  # noqa: N803
+    r: float,
+    fast_mode: bool = False,
+    output_path: str | None = None,
+):
+    """Calibrate Heston model from CSV quotes.
 
-    print("\n" + "=" * 80)
-    print("Heston Calibration")
-    print("=" * 80)
-
-    # Load or create quotes
-    if args.quotes_file:
-        print(f"\nLoading quotes from {args.quotes_file}...")
-        quotes = load_quotes_from_file(args.quotes_file)
-    else:
-        if not (args.strikes and args.maturities and args.vols):
-            print("Error: Must provide either --quotes_file or --strikes/--maturities/--vols")
-            sys.exit(1)
-
-        print("\nCreating quotes from grid...")
-        quotes = create_quotes_from_grid(args.strikes, args.maturities, args.vols)
-
+    Parameters
+    ----------
+    csv_path : str
+        Path to CSV file with market quotes.
+    S0 : float
+        Current spot price.
+    r : float
+        Risk-free rate.
+    fast_mode : bool
+        If True, use fast configuration (<30s runtime).
+    output_path : str, optional
+        Path for JSON artifact output.
+    """
+    # Load quotes
+    print(f"Loading quotes from: {csv_path}")
+    quotes = load_quotes_from_csv(csv_path)
     print(f"Loaded {len(quotes)} market quotes")
-
-    # Print surface
-    print("\nTarget Implied Volatility Surface:")
-    maturities = sorted(set(q.maturity for q in quotes))
-    strikes = sorted(set(q.strike for q in quotes))
-
-    print(f"{'K':<10} ", end="")
-    for T in maturities:
-        print(f"T={T:<6.2f} ", end="")
     print()
-    print("-" * (10 + 9 * len(maturities)))
 
-    for K in strikes:
-        print(f"{K:<10.2f} ", end="")
-        for T in maturities:
-            quote = next((q for q in quotes if q.strike == K and q.maturity == T), None)
-            if quote:
-                print(f"{quote.implied_vol:<9.4f}", end="")
-            else:
-                print(f"{'N/A':<9}", end="")
-        print()
-
-    # Create calibration config
-    config = CalibrationConfig(
-        n_paths=args.n_paths,
-        n_steps=args.n_steps,
-        rng_type=args.rng,
-        scramble=args.scramble,
-        seeds=args.seeds,
-        max_iter=args.max_iter,
-        tol=args.tol,
-        heston_scheme=args.heston_scheme,
+    # Show quote summary
+    strikes = sorted(set(q.strike for q in quotes))
+    maturities = sorted(set(q.maturity for q in quotes))
+    print(
+        f"Unique strikes: {len(strikes)} "
+        f"(range: {min(strikes):.2f} - {max(strikes):.2f})"
     )
+    print(
+        f"Unique maturities: {len(maturities)} "
+        f"(range: {min(maturities):.2f} - {max(maturities):.2f})"
+    )
+    print()
 
-    print("\nCalibration Configuration:")
-    print(f"  Spot price (S0):     {args.S0:.2f}")
-    print(f"  Risk-free rate (r):  {args.r:.4f}")
-    print(f"  n_paths:             {config.n_paths}")
-    print(f"  n_steps:             {config.n_steps}")
-    print(f"  rng_type:            {config.rng_type}")
-    print(f"  scramble:            {config.scramble}")
-    print(f"  restarts:            {len(config.seeds)}")
-    print(f"  max_iter:            {config.max_iter}")
-    print(f"  scheme:              {config.heston_scheme}")
+    # Configure based on mode
+    if fast_mode:
+        print("Running in FAST mode (<30 seconds)...")
+        config = CalibrationConfig(
+            n_paths=10000,
+            n_steps=50,
+            seeds=[42],  # Single restart
+            max_iter=50,
+            rng_type="pseudo",
+            scramble=False,
+            use_crn=True,  # Enable CRN
+            cache_size=1000,
+            regularization=0.001,  # Small regularization
+        )
+    else:
+        print("Running in FULL mode...")
+        config = CalibrationConfig(
+            n_paths=50000,
+            n_steps=100,
+            seeds=[42, 123, 456],  # Three restarts
+            max_iter=200,
+            rng_type="pseudo",
+            scramble=False,
+            use_crn=True,  # Enable CRN
+            cache_size=5000,
+            regularization=0.001,
+        )
 
-    # Initial guess
+    print(f"Paths: {config.n_paths}, Steps: {config.n_steps}")
+    print(f"Restarts: {len(config.seeds)}")
+    print(f"CRN: {config.use_crn}, Cache size: {config.cache_size}")
+    print()
+
+    # Initial guess (midpoint of typical ranges)
     initial_guess = {
-        "kappa": args.kappa_init,
-        "theta": args.theta_init,
-        "xi": args.xi_init,
-        "rho": args.rho_init,
-        "v0": args.v0_init,
+        "kappa": 2.0,
+        "theta": 0.04,
+        "xi": 0.5,
+        "rho": -0.5,
+        "v0": 0.04,
     }
 
-    print("\nInitial Guess:")
+    print("Initial guess:")
     for name, value in initial_guess.items():
-        print(f"  {name:8s}: {value:.6f}")
-
-    # Create calibrator
-    calibrator = HestonCalibrator(S0=args.S0, r=args.r, quotes=quotes, config=config)
+        print(f"  {name}: {value:.4f}")
+    print()
 
     # Run calibration
-    print("\n" + "=" * 80)
-    print("Running Calibration...")
-    print("=" * 80 + "\n")
-
+    print("Running calibration...")
+    calibrator = HestonCalibrator(S0=S0, r=r, quotes=quotes, config=config)
     result = calibrator.calibrate(initial_guess=initial_guess)
 
-    # Print results
-    print("\n" + "=" * 80)
-    print("Results")
-    print("=" * 80)
+    print("\nCalibration Results")
+    print("=" * 60)
+    print(f"Runtime: {result.runtime_sec:.2f} seconds")
+    print(f"Objective value (RMSE): {result.objective_value:.6f}")
+    print(f"Function evaluations: {result.n_evals}")
+    print(f"Cache hits: {result.cache_hits}")
+    print(f"Cache misses: {result.cache_misses}")
+    if result.cache_hits + result.cache_misses > 0:
+        hit_rate = result.cache_hits / (result.cache_hits + result.cache_misses)
+        print(f"Cache hit rate: {hit_rate:.1%}")
+    print()
 
-    print(f"\nObjective Value (RMSE): {result.objective_value:.8f}")
-    print(f"Function Evaluations:   {result.n_evals}")
-    print(f"Runtime:                {result.runtime_sec:.2f} seconds")
-
-    print("\nCalibrated Parameters:")
+    print("Fitted parameters:")
     for name, value in result.best_params.items():
-        print(f"  {name:8s}: {value:.6f}")
+        print(f"  {name}: {value:.4f}")
+    print()
 
-    # Print restart results
-    print(f"\nRestart Summary ({len(config.seeds)} restarts):")
-    print(f"{'Seed':<10} {'Objective':<15} {'Iterations'}")
-    print("-" * 40)
-    for restart in result.diagnostics["restart_results"]:
-        print(
-            f"{restart['seed']:<10} {restart['final_value']:<15.8f} "
-            f"{restart['n_iterations']}"
-        )
-
-    # Print fitted vs target
-    print("\nFitted vs Target Implied Volatilities:")
-    print(f"{'Strike':<8} {'Maturity':<10} {'Target':<10} {'Fitted':<10} {'Residual'}")
+    # Show sample of fitted vs target
+    print("Sample: Fitted vs Target Implied Volatilities:")
+    print(f"{'Strike':<10} {'Maturity':<10} {'Target':<12} {'Fitted':<12} {'Error'}")
     print("-" * 60)
-    for i, quote in enumerate(quotes):
+    # Show first 10 quotes
+    for i in range(min(10, len(quotes))):
+        quote = quotes[i]
         target = result.target_vols[i]
         fitted = result.fitted_vols[i]
-        residual = result.residuals[i]
-        print(
-            f"{quote.strike:<8.1f} {quote.maturity:<10.2f} "
-            f"{target:<10.6f} {fitted:<10.6f} {residual:>8.6f}"
-        )
+        error = result.residuals[i]
+        if not np.isnan(fitted):  # noqa: F821
+            print(
+                f"{quote.strike:<10.2f} {quote.maturity:<10.2f} "
+                f"{target:<12.4f} {fitted:<12.4f} {error:+.4f}"
+            )
 
-    # Residual statistics
+    if len(quotes) > 10:
+        print(f"... ({len(quotes) - 10} more quotes)")
+
+    # Compute error statistics
+    import numpy as np
+
     valid_residuals = [r for r in result.residuals if not np.isnan(r)]
     if valid_residuals:
-        print("\nResidual Statistics:")
-        print(f"  Mean:   {np.mean(valid_residuals):.8f}")
-        print(f"  Std:    {np.std(valid_residuals):.8f}")
-        print(f"  Max:    {np.max(np.abs(valid_residuals)):.8f}")
-        print(f"  RMSE:   {np.sqrt(np.mean(np.array(valid_residuals)**2)):.8f}")
+        print()
+        print("Error statistics:")
+        print(f"  Mean absolute error: {np.mean(np.abs(valid_residuals)):.6f}")
+        print(f"  Max absolute error: {np.max(np.abs(valid_residuals)):.6f}")
+        print(f"  Std dev of errors: {np.std(valid_residuals):.6f}")
 
-    # Save results
-    output_data = {
-        "market_params": {"S0": args.S0, "r": args.r},
-        "calibrated_params": result.best_params,
-        "objective_value": result.objective_value,
-        "n_evals": result.n_evals,
-        "runtime_sec": result.runtime_sec,
-        "quotes": [
-            {
-                "strike": q.strike,
-                "maturity": q.maturity,
-                "option_type": q.option_type,
-                "implied_vol": q.implied_vol,
-            }
-            for q in quotes
-        ],
-        "fitted_vols": result.fitted_vols,
-        "residuals": [float(r) if not np.isnan(r) else None for r in result.residuals],
-        "diagnostics": {
-            "n_restarts": result.diagnostics["n_restarts"],
-            "restart_results": result.diagnostics["restart_results"],
-            "initial_guess": result.diagnostics["initial_guess"],
-            "config": result.diagnostics["config"],
-        },
-    }
+    # Save artifact if requested
+    if output_path is not None:
+        artifact_data = {
+            "experiment": "heston_calibration_from_csv",
+            "mode": "fast" if fast_mode else "full",
+            "input_file": str(Path(csv_path).resolve()),
+            "market_params": {
+                "S0": S0,
+                "r": r,
+            },
+            "fitted_parameters": result.best_params,
+            "objective_value": result.objective_value,
+            "runtime_sec": result.runtime_sec,
+            "n_evals": result.n_evals,
+            "cache_hits": result.cache_hits,
+            "cache_misses": result.cache_misses,
+            "config": {
+                "n_paths": config.n_paths,
+                "n_steps": config.n_steps,
+                "n_restarts": len(config.seeds),
+                "use_crn": config.use_crn,
+                "cache_size": config.cache_size,
+                "regularization": config.regularization,
+            },
+            "data": {
+                "n_quotes": len(quotes),
+                "n_strikes": len(strikes),
+                "n_maturities": len(maturities),
+            },
+            "fitted_vols": result.fitted_vols,
+            "target_vols": result.target_vols,
+            "residuals": result.residuals,
+            "error_stats": {
+                "mean_abs_error": float(np.mean(np.abs(valid_residuals)))
+                if valid_residuals
+                else None,
+                "max_abs_error": float(np.max(np.abs(valid_residuals)))
+                if valid_residuals
+                else None,
+                "std_error": float(np.std(valid_residuals)) if valid_residuals else None,
+            },
+        }
 
-    with open(args.output, "w") as f:
-        json.dump(output_data, f, indent=2)
-
-    print(f"\n✓ Results saved to {args.output}")
-    print("\n" + "=" * 80)
+        save_artifact(artifact_data, output_path, include_metadata=True)
+        print(f"\nArtifact saved to: {output_path}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Calibrate Heston model to market implied volatilities"
+    )
+    parser.add_argument(
+        "csv_path",
+        type=str,
+        help="Path to CSV file with market quotes",
+    )
+    parser.add_argument(
+        "--S0",
+        type=float,
+        default=100.0,
+        help="Current spot price (default: 100.0)",
+    )
+    parser.add_argument(
+        "--r",
+        type=float,
+        default=0.05,
+        help="Risk-free rate (default: 0.05)",
+    )
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Use fast mode with reduced paths/steps (<30 seconds)",
+    )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="Output path for JSON artifact",
+    )
+
+    args = parser.parse_args()
+
+    calibrate_from_csv(
+        csv_path=args.csv_path,
+        S0=args.S0,
+        r=args.r,
+        fast_mode=args.fast,
+        output_path=args.out,
+    )
