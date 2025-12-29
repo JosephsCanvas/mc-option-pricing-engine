@@ -917,6 +917,199 @@ This demonstrates:
 - Barrier options are always ≤ vanilla options (knock-out risk)
 - Use `price_path_dependent()` method instead of `price()` for path-dependent payoffs
 
+## Heston Calibration (Synthetic Surface)
+
+The engine includes research-grade calibration functionality to fit Heston model parameters to implied volatility surfaces. The calibration module uses **numpy-only** optimization (Nelder-Mead with random restarts) for full reproducibility and transparency.
+
+### Features
+
+- **Deterministic calibration** with seed control for reproducibility
+- **Weighted RMSE objective** with optional bid-ask weighting
+- **Multiple random restarts** to avoid local minima
+- **Parameter bounds enforcement** with soft constraints
+- **Comprehensive diagnostics** including convergence history and restart results
+- **Synthetic surface generation** for validation and testing
+
+### Quick Start
+
+Generate a synthetic volatility surface from known Heston parameters and calibrate to recover them:
+
+```bash
+python scripts/synthetic_surface_demo.py
+```
+
+This demonstrates:
+- Synthetic surface generation from true parameters
+- Full calibration with multiple restarts
+- Parameter recovery analysis
+- Fitted vs target volatility comparison
+- JSON output with complete diagnostics
+
+**Example Output:**
+```
+True Heston Parameters:
+  kappa   : 2.000000
+  theta   : 0.040000
+  xi      : 0.300000
+  rho     : -0.700000
+  v0      : 0.040000
+
+Calibrated Parameters:
+  kappa   : 2.123456
+  theta   : 0.038912
+  xi      : 0.285432
+  rho     : -0.724567
+  v0      : 0.041234
+
+Objective Value (RMSE): 0.007423
+Function Evaluations:   503
+Runtime:                277.32 seconds
+```
+
+### CLI Calibration
+
+For custom surfaces, use the CLI calibration tool:
+
+```bash
+# Calibrate to a grid of strikes and maturities
+python scripts/calibrate_heston.py \
+    --S0 100 --r 0.05 \
+    --strikes 80 90 100 110 120 \
+    --maturities 0.25 0.5 1.0 \
+    --vols 0.26 0.21 0.19 0.18 0.16  \
+           0.24 0.22 0.20 0.18 0.16  \
+           0.25 0.21 0.20 0.18 0.17 \
+    --n_paths 10000 --n_steps 50 \
+    --seeds 42 123 456 \
+    --output calibration_result.json
+```
+
+**Arguments:**
+- `--strikes`: Strike prices (flattened grid)
+- `--maturities`: Times to maturity (years)
+- `--vols`: Implied volatilities (flattened: K1T1, K2T1, ..., K1T2, K2T2, ...)
+- `--n_paths`: Number of MC paths per pricing
+- `--n_steps`: Time steps for Heston simulation
+- `--seeds`: Random seeds for multiple restarts
+- `--heston_scheme`: `qe` (default) or `full_truncation_euler`
+
+Alternatively, load quotes from a JSON file:
+
+```bash
+python scripts/calibrate_heston.py \
+    --S0 100 --r 0.05 \
+    --quotes_file market_quotes.json \
+    --n_paths 10000 --n_steps 50 \
+    --seeds 42 123 456
+```
+
+**JSON format:**
+```json
+{
+  "quotes": [
+    {"strike": 90.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.22},
+    {"strike": 100.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.20},
+    ...
+  ]
+}
+```
+
+### Python API
+
+```python
+from mc_pricer.calibration import (
+    CalibrationConfig,
+    HestonCalibrator,
+    MarketQuote,
+)
+
+# Define market quotes
+quotes = [
+    MarketQuote(strike=90.0, maturity=0.5, option_type="call", implied_vol=0.22),
+    MarketQuote(strike=100.0, maturity=0.5, option_type="call", implied_vol=0.20),
+    MarketQuote(strike=110.0, maturity=0.5, option_type="call", implied_vol=0.19),
+    # ... more quotes
+]
+
+# Configure calibration
+config = CalibrationConfig(
+    n_paths=10000,
+    n_steps=50,
+    rng_type="pseudo",
+    seeds=[42, 123, 456],  # 3 restarts
+    max_iter=200,
+    tol=1e-6,
+    heston_scheme="qe",
+)
+
+# Create calibrator
+calibrator = HestonCalibrator(S0=100.0, r=0.05, quotes=quotes, config=config)
+
+# Run calibration
+result = calibrator.calibrate(initial_guess={
+    "kappa": 2.0,
+    "theta": 0.04,
+    "xi": 0.3,
+    "rho": -0.7,
+    "v0": 0.04,
+})
+
+# Access results
+print(f"Calibrated parameters: {result.best_params}")
+print(f"RMSE: {result.objective_value:.6f}")
+print(f"Evaluations: {result.n_evals}")
+print(f"Runtime: {result.runtime_sec:.2f}s")
+
+# Analyze fit quality
+for i, quote in enumerate(quotes):
+    fitted_vol = result.fitted_vols[i]
+    residual = result.residuals[i]
+    print(f"K={quote.strike}, T={quote.maturity}: "
+          f"target={quote.implied_vol:.4f}, fitted={fitted_vol:.4f}, "
+          f"error={residual:.4f}")
+```
+
+### Calibration Details
+
+**Objective Function:**
+- Weighted RMSE between model and target implied volatilities
+- Weights: `w_i = 1 / (bid_ask_width^2 + eps)` (narrower spreads = higher weight)
+- Uniform weights if no bid-ask information provided
+
+**Optimizer:**
+- Nelder-Mead simplex algorithm (numpy-only implementation)
+- No gradient required (derivative-free)
+- Automatic parameter bounds enforcement
+- Multiple random restarts to avoid local minima
+
+**Parameter Bounds (default):**
+```python
+bounds = {
+    "kappa": (0.01, 10.0),    # Mean reversion speed
+    "theta": (0.001, 1.0),     # Long-term variance
+    "xi": (0.01, 2.0),         # Vol of vol
+    "rho": (-0.999, 0.999),    # Correlation
+    "v0": (0.001, 1.0),        # Initial variance
+}
+```
+
+**Diagnostics:**
+The `CalibrationResult` includes:
+- `best_params`: Optimized Heston parameters
+- `objective_value`: Final RMSE
+- `n_evals`: Total function evaluations
+- `runtime_sec`: Calibration runtime
+- `fitted_vols`: Model implied vols at optimum
+- `residuals`: Fitted - target vols
+- `diagnostics`: Convergence histories, restart results, config
+
+**Important Notes:**
+- Heston calibration is **ill-posed**: multiple parameter sets can produce similar surfaces
+- Use multiple restarts to explore parameter space
+- Higher `n_paths` and `n_steps` improve accuracy but increase runtime
+- QE scheme generally provides better convergence than Full Truncation Euler
+- Calibration to synthetic data validates the implementation; real market calibration requires additional considerations (e.g., term structure, smile dynamics)
+
 ## Roadmap
 
 Future enhancements planned:
@@ -949,9 +1142,9 @@ Future enhancements planned:
 - **Memory-efficient streaming** for large simulations
 
 ### Calibration
-- **Implied volatility surface** fitting
-- **Model parameter calibration** to market data
-- **Variance swap pricing**
+- ✅ **Heston parameter calibration** to implied volatility surfaces (implemented)
+- **Local volatility surface** construction
+- **Variance swap pricing** and model-free implied variance
 
 ## Reproducible Research
 
