@@ -1,0 +1,14 @@
+{
+  "quotes": [
+    {"strike": 80.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.245, "bid_ask_width": 0.005},
+    {"strike": 90.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.225, "bid_ask_width": 0.003},
+    {"strike": 100.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.210, "bid_ask_width": 0.002},
+    {"strike": 110.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.195, "bid_ask_width": 0.003},
+    {"strike": 120.0, "maturity": 0.5, "option_type": "call", "implied_vol": 0.185, "bid_ask_width": 0.005},
+    {"strike": 80.0, "maturity": 1.0, "option_type": "call", "implied_vol": 0.250, "bid_ask_width": 0.004},
+    {"strike": 90.0, "maturity": 1.0, "option_type": "call", "implied_vol": 0.220, "bid_ask_width": 0.002},
+    {"strike": 100.0, "maturity": 1.0, "option_type": "call", "implied_vol": 0.200, "bid_ask_width": 0.002},
+    {"strike": 110.0, "maturity": 1.0, "option_type": "call", "implied_vol": 0.185, "bid_ask_width": 0.002},
+    {"strike": 120.0, "maturity": 1.0, "option_type": "call", "implied_vol": 0.175, "bid_ask_width": 0.004}
+  ]
+}
