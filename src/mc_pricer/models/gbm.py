@@ -31,7 +31,7 @@ class GeometricBrownianMotion:
         T: float,
         seed: int | None = None,
         rng_type: Literal["pseudo", "sobol"] = "pseudo",
-        scramble: bool = False
+        scramble: bool = False,
     ):
         """
         Initialize GBM model parameters.
@@ -74,10 +74,7 @@ class GeometricBrownianMotion:
         self._seed = seed
 
     def simulate_paths(
-        self,
-        n_paths: int,
-        n_steps: int = 1,
-        antithetic: bool = False
+        self, n_paths: int, n_steps: int = 1, antithetic: bool = False
     ) -> np.ndarray:
         """
         Simulate asset price paths using GBM.
@@ -114,11 +111,7 @@ class GeometricBrownianMotion:
             # Use Sobol sequence (dimension = n_steps)
             n_random = (n_paths + 1) // 2 if antithetic else n_paths
 
-            sobol = SobolGenerator(
-                dimension=n_steps,
-                seed=self._seed,
-                scramble=self.scramble
-            )
+            sobol = SobolGenerator(dimension=n_steps, seed=self._seed, scramble=self.scramble)
             U = sobol.generate(n_random, skip=0)
 
             if antithetic:
@@ -152,11 +145,7 @@ class GeometricBrownianMotion:
 
         return S
 
-    def simulate_terminal(
-        self,
-        n_paths: int,
-        antithetic: bool = False
-    ) -> np.ndarray:
+    def simulate_terminal(self, n_paths: int, antithetic: bool = False) -> np.ndarray:
         """
         Simulate terminal asset prices at maturity (optimized for European options).
 
@@ -185,11 +174,7 @@ class GeometricBrownianMotion:
             # Use Sobol sequence
             n_random = (n_paths + 1) // 2 if antithetic else n_paths
 
-            sobol = SobolGenerator(
-                dimension=1,
-                seed=self._seed,
-                scramble=self.scramble
-            )
+            sobol = SobolGenerator(dimension=1, seed=self._seed, scramble=self.scramble)
             U = sobol.generate(n_random, skip=0)[:, 0]
 
             if antithetic:
@@ -210,7 +195,10 @@ class GeometricBrownianMotion:
 
         # Compute terminal prices using closed-form solution
         # S_T = S_0 * exp((r - 0.5*σ²)*T + σ*√T*Z)
-        log_ST = np.log(self.S0) + (self.r - 0.5 * self.sigma**2) * self.T + \
-                 self.sigma * np.sqrt(self.T) * Z
+        log_ST = (
+            np.log(self.S0)
+            + (self.r - 0.5 * self.sigma**2) * self.T
+            + self.sigma * np.sqrt(self.T) * Z
+        )
 
         return np.exp(log_ST)

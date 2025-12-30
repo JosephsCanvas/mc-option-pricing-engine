@@ -40,14 +40,10 @@ def test_crn_deterministic(simple_quotes, calibrator_params):
     )
 
     # Run calibration twice with same config
-    cal1 = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    cal1 = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
     result1 = cal1.calibrate()
 
-    cal2 = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    cal2 = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
     result2 = cal2.calibrate()
 
     # Results should be identical
@@ -80,9 +76,7 @@ def test_cache_consistency(simple_quotes, calibrator_params):
         cache_size=0,
     )
 
-    cal_cached = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config_cached
-    )
+    cal_cached = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config_cached)
     result_cached = cal_cached.calibrate()
 
     cal_no_cache = HestonCalibrator(
@@ -110,9 +104,7 @@ def test_cache_hit_rate(simple_quotes, calibrator_params):
         cache_size=100,
     )
 
-    calibrator = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    calibrator = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
     result = calibrator.calibrate()
 
     # With CRN and multiple restarts, should get some cache hits
@@ -134,9 +126,7 @@ def test_cache_size_limit(simple_quotes, calibrator_params):
         cache_size=10,  # Small cache
     )
 
-    calibrator = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    calibrator = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
     calibrator.calibrate()
 
     # Cache should not exceed size limit
@@ -156,9 +146,7 @@ def test_fast_mode_completes(simple_quotes, calibrator_params):
         cache_size=100,
     )
 
-    calibrator = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    calibrator = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
 
     start = time.time()
     result = calibrator.calibrate()
@@ -198,14 +186,10 @@ def test_crn_different_seeds(simple_quotes, calibrator_params):
         use_crn=False,
     )
 
-    cal1 = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config1
-    )
+    cal1 = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config1)
     result1 = cal1.calibrate()
 
-    cal2 = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config2
-    )
+    cal2 = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config2)
     result2 = cal2.calibrate()
 
     # Results should differ (different random seeds, no CRN)
@@ -226,9 +210,7 @@ def test_calibration_improves_objective(simple_quotes, calibrator_params):
         use_crn=True,
     )
 
-    calibrator = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    calibrator = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
 
     # Poor initial guess
     initial_guess = {
@@ -260,9 +242,7 @@ def test_multiple_restarts(simple_quotes, calibrator_params):
         use_crn=True,
     )
 
-    calibrator = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config
-    )
+    calibrator = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config)
     result = calibrator.calibrate()
 
     # Should have 3 restart results
@@ -296,9 +276,7 @@ def test_regularization(simple_quotes, calibrator_params):
         use_crn=True,
     )
 
-    cal_no_reg = HestonCalibrator(
-        **calibrator_params, quotes=simple_quotes, config=config_no_reg
-    )
+    cal_no_reg = HestonCalibrator(**calibrator_params, quotes=simple_quotes, config=config_no_reg)
     result_no_reg = cal_no_reg.calibrate()
 
     cal_with_reg = HestonCalibrator(
@@ -341,9 +319,7 @@ def test_weighted_calibration(calibrator_params):
         use_crn=True,
     )
 
-    calibrator = HestonCalibrator(
-        **calibrator_params, quotes=weighted_quotes, config=config
-    )
+    calibrator = HestonCalibrator(**calibrator_params, quotes=weighted_quotes, config=config)
 
     # Weights should be computed
     assert len(calibrator.weights) == len(weighted_quotes)

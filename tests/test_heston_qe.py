@@ -96,7 +96,7 @@ class TestHestonModelQE:
             rho=-0.7,
             v0=0.04,
             seed=42,
-            scheme="qe"
+            scheme="qe",
         )
         assert model.scheme == "qe"
 
@@ -112,7 +112,7 @@ class TestHestonModelQE:
                 xi=0.3,
                 rho=-0.7,
                 v0=0.04,
-                scheme="invalid"
+                scheme="invalid",
             )
 
     def test_qe_reproducibility(self):
@@ -126,7 +126,7 @@ class TestHestonModelQE:
             "xi": 0.3,
             "rho": -0.7,
             "v0": 0.04,
-            "scheme": "qe"
+            "scheme": "qe",
         }
 
         model1 = HestonModel(**params, seed=42)
@@ -149,7 +149,7 @@ class TestHestonModelQE:
             rho=-0.7,
             v0=0.04,
             seed=42,
-            scheme="qe"
+            scheme="qe",
         )
 
         terminal = model.simulate_terminal(n_paths=10000, n_steps=100)
@@ -169,7 +169,7 @@ class TestHestonModelQE:
             rho=-0.7,
             v0=0.04,
             seed=42,
-            scheme="qe"
+            scheme="qe",
         )
 
         # Test with even number of paths
@@ -194,7 +194,7 @@ class TestHestonModelQE:
             "theta": 0.04,
             "xi": 0.3,
             "rho": -0.7,
-            "v0": 0.04
+            "v0": 0.04,
         }
 
         # Price with FT Euler
@@ -223,9 +223,7 @@ class TestHestonModelQE:
 
         # Also check relative difference is reasonable
         rel_diff = price_diff / result_ft.price
-        assert rel_diff < 0.02, (
-            f"Relative difference {rel_diff:.4f} exceeds 2%"
-        )
+        assert rel_diff < 0.02, f"Relative difference {rel_diff:.4f} exceeds 2%"
 
     def test_qe_black_scholes_limit(self):
         """Test that QE converges to Black-Scholes when xi=0."""
@@ -248,16 +246,11 @@ class TestHestonModelQE:
             rho=0.0,  # No correlation
             v0=theta,  # Start at long-term variance
             seed=42,
-            scheme="qe"
+            scheme="qe",
         )
 
         payoff = EuropeanCallPayoff(strike=K)
-        engine = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=100000,
-            n_steps=200
-        )
+        engine = HestonMonteCarloEngine(model=model, payoff=payoff, n_paths=100000, n_steps=200)
         result = engine.price()
 
         # Should match BS within 3 standard errors
@@ -268,9 +261,7 @@ class TestHestonModelQE:
 
         # Also check relative error
         rel_error = abs(result.price - bs_call) / bs_call
-        assert rel_error < 0.02, (
-            f"Relative error {rel_error:.4f} exceeds 2%"
-        )
+        assert rel_error < 0.02, f"Relative error {rel_error:.4f} exceeds 2%"
 
 
 class TestHestonPricingResultWithScheme:
@@ -288,13 +279,11 @@ class TestHestonPricingResultWithScheme:
             rho=-0.7,
             v0=0.04,
             seed=42,
-            scheme="qe"
+            scheme="qe",
         )
 
         payoff = EuropeanCallPayoff(strike=100.0)
-        engine = HestonMonteCarloEngine(
-            model=model, payoff=payoff, n_paths=10000, n_steps=50
-        )
+        engine = HestonMonteCarloEngine(model=model, payoff=payoff, n_paths=10000, n_steps=50)
         result = engine.price()
 
         assert hasattr(result, "scheme")
@@ -311,14 +300,12 @@ class TestHestonPricingResultWithScheme:
             xi=0.3,
             rho=-0.7,
             v0=0.04,
-            seed=42
+            seed=42,
             # No scheme specified -> default to full_truncation_euler
         )
 
         payoff = EuropeanCallPayoff(strike=100.0)
-        engine = HestonMonteCarloEngine(
-            model=model, payoff=payoff, n_paths=10000, n_steps=50
-        )
+        engine = HestonMonteCarloEngine(model=model, payoff=payoff, n_paths=10000, n_steps=50)
         result = engine.price()
 
         assert result.scheme == "full_truncation_euler"

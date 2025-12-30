@@ -41,7 +41,7 @@ class TestBlackScholesReferences:
             params["r"],
             params["T"],
             params["sigma"],
-            params["option_type"]
+            params["option_type"],
         )
 
         assert abs(price - ref["reference_price"]) < 1e-10
@@ -57,7 +57,7 @@ class TestBlackScholesReferences:
             params["r"],
             params["T"],
             params["sigma"],
-            params["option_type"]
+            params["option_type"],
         )
 
         assert abs(delta - ref["reference_delta"]) < 1e-10
@@ -67,13 +67,7 @@ class TestBlackScholesReferences:
         ref = reference_values["test_cases"]["black_scholes_atm_call"]
         params = ref["parameters"]
 
-        vega = bs_vega(
-            params["S0"],
-            params["K"],
-            params["r"],
-            params["T"],
-            params["sigma"]
-        )
+        vega = bs_vega(params["S0"], params["K"], params["r"], params["T"], params["sigma"])
 
         assert abs(vega - ref["reference_vega"]) < 1e-10
 
@@ -91,7 +85,7 @@ class TestGBMMonteCarloReferences:
             r=params["r"],
             sigma=params["sigma"],
             T=params["T"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         payoff = EuropeanCallPayoff(strike=params["K"])
@@ -100,7 +94,7 @@ class TestGBMMonteCarloReferences:
             payoff=payoff,
             n_paths=params["n_paths"],
             antithetic=params["antithetic"],
-            control_variate=params["control_variate"]
+            control_variate=params["control_variate"],
         )
 
         result = engine.price()
@@ -119,7 +113,7 @@ class TestGBMMonteCarloReferences:
             r=params["r"],
             sigma=params["sigma"],
             T=params["T"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         payoff = EuropeanCallPayoff(strike=params["K"])
@@ -128,7 +122,7 @@ class TestGBMMonteCarloReferences:
             payoff=payoff,
             n_paths=params["n_paths"],
             antithetic=params["antithetic"],
-            control_variate=params["control_variate"]
+            control_variate=params["control_variate"],
         )
 
         result = engine.price()
@@ -148,7 +142,7 @@ class TestGBMMonteCarloReferences:
             r=params_plain["r"],
             sigma=params_plain["sigma"],
             T=params_plain["T"],
-            seed=params_plain["seed"]
+            seed=params_plain["seed"],
         )
         payoff = EuropeanCallPayoff(strike=params_plain["K"])
         engine_plain = MonteCarloEngine(
@@ -156,7 +150,7 @@ class TestGBMMonteCarloReferences:
             payoff=payoff,
             n_paths=params_plain["n_paths"],
             antithetic=False,
-            control_variate=False
+            control_variate=False,
         )
         result_plain = engine_plain.price()
 
@@ -166,14 +160,14 @@ class TestGBMMonteCarloReferences:
             r=params_plain["r"],
             sigma=params_plain["sigma"],
             T=params_plain["T"],
-            seed=params_plain["seed"]
+            seed=params_plain["seed"],
         )
         engine_cv = MonteCarloEngine(
             model=model_cv,
             payoff=payoff,
             n_paths=params_plain["n_paths"],
             antithetic=False,
-            control_variate=True
+            control_variate=True,
         )
         result_cv = engine_cv.price()
 
@@ -192,7 +186,7 @@ class TestGBMMonteCarloReferences:
             r=params["r"],
             sigma=params["sigma"],
             T=params["T"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         payoff = EuropeanCallPayoff(strike=params["K"])
@@ -201,13 +195,10 @@ class TestGBMMonteCarloReferences:
             payoff=payoff,
             n_paths=params["n_paths"],
             antithetic=False,
-            control_variate=False
+            control_variate=False,
         )
 
-        greeks = engine.compute_greeks(
-            option_type=params["option_type"],
-            method=params["method"]
-        )
+        greeks = engine.compute_greeks(option_type=params["option_type"], method=params["method"])
 
         assert greeks.delta is not None
         assert abs(greeks.delta.value - ref["reference_delta"]) < ref["tolerance"]
@@ -231,7 +222,7 @@ class TestHestonReferences:
             xi=params["xi"],
             rho=params["rho"],
             v0=params["v0"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         payoff = EuropeanCallPayoff(strike=params["K"])
@@ -240,7 +231,7 @@ class TestHestonReferences:
             payoff=payoff,
             n_paths=params["n_paths"],
             n_steps=params["n_steps"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         result = engine.price()
@@ -271,7 +262,7 @@ class TestAmericanReferences:
             r=params["r"],
             sigma=params["sigma"],
             T=params["T"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         american_result = price_american_lsm(
@@ -281,7 +272,7 @@ class TestAmericanReferences:
             n_paths=params["n_paths"],
             n_steps=params["n_steps"],
             basis="poly2",
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         # European put
@@ -290,7 +281,7 @@ class TestAmericanReferences:
             r=params["r"],
             sigma=params["sigma"],
             T=params["T"],
-            seed=params["seed"]
+            seed=params["seed"],
         )
 
         payoff = EuropeanPutPayoff(strike=params["K"])
@@ -299,7 +290,7 @@ class TestAmericanReferences:
             payoff=payoff,
             n_paths=params["n_paths"],
             antithetic=False,
-            control_variate=False
+            control_variate=False,
         )
 
         european_result = engine_eu.price()

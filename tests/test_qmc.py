@@ -236,14 +236,34 @@ class TestQMCIntegration:
         n_steps = 10  # Use 10 steps (20 dimensions for Heston) to stay within 21 limit
 
         model1 = HestonModel(
-            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04,
-            seed=42, scheme="qe", rng_type="sobol", scramble=False
+            S0=100.0,
+            r=0.05,
+            T=1.0,
+            kappa=2.0,
+            theta=0.04,
+            xi=0.3,
+            rho=-0.7,
+            v0=0.04,
+            seed=42,
+            scheme="qe",
+            rng_type="sobol",
+            scramble=False,
         )
         paths1 = model1.simulate_paths(n_paths=n_paths, n_steps=n_steps, antithetic=False)
 
         model2 = HestonModel(
-            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04,
-            seed=42, scheme="qe", rng_type="sobol", scramble=False
+            S0=100.0,
+            r=0.05,
+            T=1.0,
+            kappa=2.0,
+            theta=0.04,
+            xi=0.3,
+            rho=-0.7,
+            v0=0.04,
+            seed=42,
+            scheme="qe",
+            rng_type="sobol",
+            scramble=False,
         )
         paths2 = model2.simulate_paths(n_paths=n_paths, n_steps=n_steps, antithetic=False)
 
@@ -266,8 +286,11 @@ class TestQMCIntegration:
         )
         payoff = EuropeanCallPayoff(strike=K)
         engine_pseudo = MonteCarloEngine(
-            model=model_pseudo, payoff=payoff, n_paths=n_paths,
-            antithetic=False, control_variate=False
+            model=model_pseudo,
+            payoff=payoff,
+            n_paths=n_paths,
+            antithetic=False,
+            control_variate=False,
         )
         result_pseudo = engine_pseudo.price()
         error_pseudo = abs(result_pseudo.price - ref_price)
@@ -277,8 +300,7 @@ class TestQMCIntegration:
             S0=S0, r=r, sigma=sigma, T=T, seed=seed, rng_type="sobol", scramble=False
         )
         engine_qmc = MonteCarloEngine(
-            model=model_qmc, payoff=payoff, n_paths=n_paths,
-            antithetic=False, control_variate=False
+            model=model_qmc, payoff=payoff, n_paths=n_paths, antithetic=False, control_variate=False
         )
         result_qmc = engine_qmc.price()
         error_qmc = abs(result_qmc.price - ref_price)
@@ -309,8 +331,18 @@ class TestQMCIntegration:
 
         # Heston paths
         model_heston = HestonModel(
-            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04,
-            seed=42, scheme="qe", rng_type="sobol", scramble=False
+            S0=100.0,
+            r=0.05,
+            T=1.0,
+            kappa=2.0,
+            theta=0.04,
+            xi=0.3,
+            rho=-0.7,
+            v0=0.04,
+            seed=42,
+            scheme="qe",
+            rng_type="sobol",
+            scramble=False,
         )
         paths_heston = model_heston.simulate_paths(
             n_paths=n_paths, n_steps=n_steps, antithetic=False

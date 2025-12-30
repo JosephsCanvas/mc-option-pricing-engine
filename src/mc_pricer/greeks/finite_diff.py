@@ -15,7 +15,7 @@ def finite_diff_delta(
     engine_factory: Callable[[float, float, int], object],
     base_params: dict,
     h_rel: float = 1e-4,
-    seed: int = 123
+    seed: int = 123,
 ) -> GreekResult:
     """
     Compute Delta via central finite difference.
@@ -36,8 +36,8 @@ def finite_diff_delta(
     GreekResult
         Delta estimate with standard error and confidence interval
     """
-    S0 = base_params['S0']
-    sigma = base_params['sigma']
+    S0 = base_params["S0"]
+    sigma = base_params["sigma"]
 
     # Compute step size
     h = h_rel * S0
@@ -88,10 +88,7 @@ def finite_diff_delta(
     ci_upper = mean_delta + z_critical * stderr
 
     return GreekResult(
-        value=mean_delta,
-        standard_error=stderr,
-        ci_lower=ci_lower,
-        ci_upper=ci_upper
+        value=mean_delta, standard_error=stderr, ci_lower=ci_lower, ci_upper=ci_upper
     )
 
 
@@ -99,7 +96,7 @@ def finite_diff_vega(
     engine_factory: Callable[[float, float, int], object],
     base_params: dict,
     h_abs: float = 1e-4,
-    seed: int = 123
+    seed: int = 123,
 ) -> GreekResult:
     """
     Compute Vega via central finite difference.
@@ -120,8 +117,8 @@ def finite_diff_vega(
     GreekResult
         Vega estimate with standard error and confidence interval
     """
-    S0 = base_params['S0']
-    sigma = base_params['sigma']
+    S0 = base_params["S0"]
+    sigma = base_params["sigma"]
 
     # Compute step size
     h = h_abs
@@ -172,12 +169,7 @@ def finite_diff_vega(
     ci_lower = mean_vega - z_critical * stderr
     ci_upper = mean_vega + z_critical * stderr
 
-    return GreekResult(
-        value=mean_vega,
-        standard_error=stderr,
-        ci_lower=ci_lower,
-        ci_upper=ci_upper
-    )
+    return GreekResult(value=mean_vega, standard_error=stderr, ci_lower=ci_lower, ci_upper=ci_upper)
 
     def gamma(self) -> float:
         """Compute Gamma via central difference."""

@@ -13,18 +13,21 @@ from mc_pricer.analytics.implied_vol import implied_vol
 class TestImpliedVolRecovery:
     """Test that implied_vol recovers the true volatility."""
 
-    @pytest.mark.parametrize("S0,K,r,T,sigma,option_type", [
-        (100, 100, 0.05, 1.0, 0.20, "call"),
-        (100, 100, 0.05, 1.0, 0.20, "put"),
-        (100, 110, 0.05, 1.0, 0.25, "call"),  # OTM call
-        (100, 90, 0.05, 1.0, 0.25, "put"),    # OTM put
-        (100, 90, 0.05, 1.0, 0.15, "call"),   # ITM call
-        (100, 110, 0.05, 1.0, 0.15, "put"),   # ITM put
-        (50, 50, 0.03, 0.5, 0.30, "call"),    # Different params
-        (150, 150, 0.02, 2.0, 0.18, "put"),   # Longer maturity
-        (80, 100, 0.04, 0.25, 0.40, "call"),  # High vol
-        (120, 100, 0.01, 0.5, 0.15, "put"),   # Moderate maturity OTM put
-    ])
+    @pytest.mark.parametrize(
+        "S0,K,r,T,sigma,option_type",
+        [
+            (100, 100, 0.05, 1.0, 0.20, "call"),
+            (100, 100, 0.05, 1.0, 0.20, "put"),
+            (100, 110, 0.05, 1.0, 0.25, "call"),  # OTM call
+            (100, 90, 0.05, 1.0, 0.25, "put"),  # OTM put
+            (100, 90, 0.05, 1.0, 0.15, "call"),  # ITM call
+            (100, 110, 0.05, 1.0, 0.15, "put"),  # ITM put
+            (50, 50, 0.03, 0.5, 0.30, "call"),  # Different params
+            (150, 150, 0.02, 2.0, 0.18, "put"),  # Longer maturity
+            (80, 100, 0.04, 0.25, 0.40, "call"),  # High vol
+            (120, 100, 0.01, 0.5, 0.15, "put"),  # Moderate maturity OTM put
+        ],
+    )
     def test_recovery_accuracy(self, S0, K, r, T, sigma, option_type):
         """Test that IV solver recovers true volatility accurately."""
         # Compute price with true volatility
@@ -35,8 +38,7 @@ class TestImpliedVolRecovery:
 
         # Check recovery accuracy
         assert abs(iv - sigma) < 1e-6, (
-            f"IV recovery failed: got {iv:.8f}, expected {sigma:.8f}, "
-            f"error: {abs(iv - sigma):.2e}"
+            f"IV recovery failed: got {iv:.8f}, expected {sigma:.8f}, error: {abs(iv - sigma):.2e}"
         )
 
     def test_atm_options_various_vols(self):
@@ -259,10 +261,5 @@ class TestConvergence:
         price = bs_price(S0, K, r, T, sigma, "call")
 
         # Use custom bounds that bracket the solution
-        iv = implied_vol(
-            price, S0, K, r, T, "call",
-            sigma_low=0.1,
-            sigma_high=0.5,
-            tol=1e-8
-        )
+        iv = implied_vol(price, S0, K, r, T, "call", sigma_low=0.1, sigma_high=0.5, tol=1e-8)
         assert abs(iv - sigma) < 1e-6

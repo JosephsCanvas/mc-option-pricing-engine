@@ -41,29 +41,27 @@ def main():
     print(f"LSM: n_steps={n_steps}, basis={basis}, seed={seed}")
     print("\nComparing European Put vs American Put prices:")
     print("-" * 100)
-    print(f"{'n_paths':<12} {'Euro Put Price':<18} {'Euro SE':<12} "
-          f"{'Amer Put Price':<18} {'Amer SE':<12} {'Premium':<12}")
+    print(
+        f"{'n_paths':<12} {'Euro Put Price':<18} {'Euro SE':<12} "
+        f"{'Amer Put Price':<18} {'Amer SE':<12} {'Premium':<12}"
+    )
     print("-" * 100)
 
     for n_paths in path_counts:
         # European put
-        model_euro = GeometricBrownianMotion(
-            S0=S0, r=r, sigma=sigma, T=T, seed=seed
-        )
+        model_euro = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff_euro = EuropeanPutPayoff(strike=K)
         engine_euro = MonteCarloEngine(
             model=model_euro,
             payoff=payoff_euro,
             n_paths=n_paths,
             antithetic=False,
-            control_variate=False
+            control_variate=False,
         )
         result_euro = engine_euro.price()
 
         # American put
-        model_amer = GeometricBrownianMotion(
-            S0=S0, r=r, sigma=sigma, T=T, seed=seed
-        )
+        model_amer = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         result_amer = price_american_lsm(
             model=model_amer,
             strike=K,
@@ -71,16 +69,18 @@ def main():
             n_paths=n_paths,
             n_steps=n_steps,
             basis=basis,
-            seed=seed
+            seed=seed,
         )
 
         # Premium
         premium = result_amer.price - result_euro.price
 
-        print(f"{n_paths:<12,} "
-              f"{result_euro.price:<18.6f} {result_euro.stderr:<12.6f} "
-              f"{result_amer.price:<18.6f} {result_amer.stderr:<12.6f} "
-              f"{premium:<12.6f}")
+        print(
+            f"{n_paths:<12,} "
+            f"{result_euro.price:<18.6f} {result_euro.stderr:<12.6f} "
+            f"{result_amer.price:<18.6f} {result_amer.stderr:<12.6f} "
+            f"{premium:<12.6f}"
+        )
 
     print("-" * 100)
     print("\nKey Observations:")

@@ -8,11 +8,7 @@ from pathlib import Path
 from mc_pricer.experiments.types import ExperimentResult
 
 
-def save_results(
-    results: list[ExperimentResult],
-    out_dir: Path,
-    experiment_name: str
-) -> None:
+def save_results(results: list[ExperimentResult], out_dir: Path, experiment_name: str) -> None:
     """
     Save experiment results to JSON and summary text files.
 
@@ -37,7 +33,7 @@ def save_results(
     json_data = {
         "experiment_name": experiment_name,
         "n_results": len(results),
-        "results": [r.to_dict() for r in results]
+        "results": [r.to_dict() for r in results],
     }
 
     with open(json_path, "w") as f:
@@ -64,23 +60,29 @@ def save_results(
             f.write(f"  Option:         {meta.option_type} {meta.style}\n")
 
         f.write("\n" + "-" * 120 + "\n")
-        f.write(f"{'Method':<25} {'n_paths':>10} {'n_steps':>10} {'Price':>12} "
-                f"{'Stderr':>12} {'CI Width':>12} {'Rel Err %':>10} {'Runtime (s)':>12}\n")
+        f.write(
+            f"{'Method':<25} {'n_paths':>10} {'n_steps':>10} {'Price':>12} "
+            f"{'Stderr':>12} {'CI Width':>12} {'Rel Err %':>10} {'Runtime (s)':>12}\n"
+        )
         f.write("-" * 120 + "\n")
 
         for r in results:
             n_steps_str = str(r.n_steps) if r.n_steps else "N/A"
-            f.write(f"{r.notes:<25} {r.n_paths:>10} {n_steps_str:>10} {r.price:>12.6f} "
-                    f"{r.stderr:>12.6f} {r.ci_width:>12.6f} {r.relative_error * 100:>10.4f} "
-                    f"{r.runtime_seconds:>12.3f}\n")
+            f.write(
+                f"{r.notes:<25} {r.n_paths:>10} {n_steps_str:>10} {r.price:>12.6f} "
+                f"{r.stderr:>12.6f} {r.ci_width:>12.6f} {r.relative_error * 100:>10.4f} "
+                f"{r.runtime_seconds:>12.3f}\n"
+            )
 
         f.write("-" * 120 + "\n")
 
         # Aggregate statistics by method
         f.write("\nAggregate Statistics by Method:\n")
         f.write("-" * 120 + "\n")
-        f.write(f"{'Method':<25} {'Count':>10} {'Mean Price':>12} {'Mean Stderr':>12} "
-                f"{'Mean CI Width':>14} {'Mean Runtime':>14}\n")
+        f.write(
+            f"{'Method':<25} {'Count':>10} {'Mean Price':>12} {'Mean Stderr':>12} "
+            f"{'Mean CI Width':>14} {'Mean Runtime':>14}\n"
+        )
         f.write("-" * 120 + "\n")
 
         # Group by notes (method)
@@ -97,8 +99,10 @@ def save_results(
             mean_ci_width = sum(r.ci_width for r in group) / count
             mean_runtime = sum(r.runtime_seconds for r in group) / count
 
-            f.write(f"{method:<25} {count:>10} {mean_price:>12.6f} {mean_stderr:>12.6f} "
-                    f"{mean_ci_width:>14.6f} {mean_runtime:>14.3f}\n")
+            f.write(
+                f"{method:<25} {count:>10} {mean_price:>12.6f} {mean_stderr:>12.6f} "
+                f"{mean_ci_width:>14.6f} {mean_runtime:>14.3f}\n"
+            )
 
         f.write("-" * 120 + "\n")
 
@@ -116,8 +120,10 @@ def save_results(
                 mean_ci_lower = sum(r.ci_lower for r in group) / len(group)
                 mean_ci_upper = sum(r.ci_upper for r in group) / len(group)
 
-                f.write(f"{method:<30} {mean_price:.6f} ± {mean_stderr:.6f}    "
-                        f"[{mean_ci_lower:.6f}, {mean_ci_upper:.6f}]\n")
+                f.write(
+                    f"{method:<30} {mean_price:.6f} ± {mean_stderr:.6f}    "
+                    f"[{mean_ci_lower:.6f}, {mean_ci_upper:.6f}]\n"
+                )
 
             f.write("=" * 80 + "\n")
 

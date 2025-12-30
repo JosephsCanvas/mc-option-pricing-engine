@@ -10,13 +10,7 @@ from mc_pricer.greeks.types import GreekResult
 
 
 def pathwise_delta_vega(
-    S_T: np.ndarray,
-    S0: float,
-    K: float,
-    r: float,
-    sigma: float,
-    T: float,
-    option_type: str
+    S_T: np.ndarray, S0: float, K: float, r: float, sigma: float, T: float, option_type: str
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute pathwise delta and vega samples.
@@ -49,10 +43,10 @@ def pathwise_delta_vega(
     discount = math.exp(-r * T)
 
     # Indicator function
-    if option_type.lower() == 'call':
+    if option_type.lower() == "call":
         indicator = (S_T > K).astype(float)
         sign = 1.0
-    elif option_type.lower() == 'put':
+    elif option_type.lower() == "put":
         indicator = (S_T < K).astype(float)
         sign = -1.0
     else:
@@ -105,9 +99,4 @@ def summarize_samples(samples: np.ndarray) -> GreekResult:
     ci_lower = value - z_critical * stderr
     ci_upper = value + z_critical * stderr
 
-    return GreekResult(
-        value=value,
-        standard_error=stderr,
-        ci_lower=ci_lower,
-        ci_upper=ci_upper
-    )
+    return GreekResult(value=value, standard_error=stderr, ci_lower=ci_lower, ci_upper=ci_upper)

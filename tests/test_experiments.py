@@ -30,7 +30,7 @@ class TestExperimentConfig:
             T=1.0,
             sigma=0.2,
             n_paths_list=[1000],
-            seeds=[42]
+            seeds=[42],
         )
 
         assert config.name == "test"
@@ -55,7 +55,7 @@ class TestExperimentConfig:
             v0=0.04,
             n_paths_list=[1000],
             n_steps=100,
-            seeds=[42]
+            seeds=[42],
         )
 
         assert config.kappa == 2.0
@@ -78,7 +78,7 @@ class TestExperimentRunner:
             T=1.0,
             sigma=0.2,
             n_paths_list=[10000],
-            seeds=[42]
+            seeds=[42],
         )
 
         results1 = run_experiment(config)
@@ -101,7 +101,7 @@ class TestExperimentRunner:
             T=1.0,
             sigma=0.2,
             n_paths_list=[1000, 5000, 10000],
-            seeds=[42, 123, 456]
+            seeds=[42, 123, 456],
         )
 
         results = run_experiment(config)
@@ -132,7 +132,7 @@ class TestExperimentRunner:
             T=1.0,
             sigma=0.2,
             n_paths_list=[1000],
-            seeds=[42]
+            seeds=[42],
         )
 
         results = run_experiment(config)
@@ -161,7 +161,7 @@ class TestExperimentRunner:
             T=1.0,
             sigma=0.2,
             n_paths_list=[10000],
-            seeds=[42]
+            seeds=[42],
         )
 
         results = run_experiment(config)
@@ -184,7 +184,7 @@ class TestExperimentRunner:
             sigma=0.2,
             n_paths_list=[10000],
             seeds=[42],
-            control_variate=True
+            control_variate=True,
         )
 
         results = run_experiment(config)
@@ -211,7 +211,7 @@ class TestExperimentRunner:
             v0=0.04,
             n_paths_list=[10000],
             n_steps=100,
-            seeds=[42]
+            seeds=[42],
         )
 
         results = run_experiment(config)
@@ -236,7 +236,7 @@ class TestExperimentRunner:
             n_paths_list=[10000],
             n_steps=50,
             seeds=[42],
-            lsm_basis="poly2"
+            lsm_basis="poly2",
         )
 
         results = run_experiment(config)
@@ -258,7 +258,7 @@ class TestExperimentRunner:
             r=0.05,
             T=1.0,
             n_paths_list=[1000],
-            seeds=[42]
+            seeds=[42],
         )
 
         with pytest.raises(ValueError, match="sigma"):
@@ -281,7 +281,7 @@ class TestExperimentIO:
             T=1.0,
             sigma=0.2,
             n_paths_list=[1000],
-            seeds=[42]
+            seeds=[42],
         )
 
         results = run_experiment(config)
@@ -319,7 +319,7 @@ class TestExperimentIO:
             T=1.0,
             sigma=0.2,
             n_paths_list=[1000, 5000],
-            seeds=[42, 123]
+            seeds=[42, 123],
         )
 
         results = run_experiment(config)
@@ -351,7 +351,7 @@ class TestExperimentIO:
             sigma=0.2,
             n_paths_list=[1000],
             seeds=[42],
-            antithetic=True
+            antithetic=True,
         )
 
         results = run_experiment(config)

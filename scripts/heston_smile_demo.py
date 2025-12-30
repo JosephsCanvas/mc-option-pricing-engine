@@ -52,8 +52,10 @@ def main():
     print(f"\nLong-term volatility: σ∞ = √θ = {np.sqrt(theta):.4f}")
 
     print("\n" + "-" * 100)
-    print(f"{'Strike':<10} {'Moneyness':<12} {'Price':<15} {'Stderr':<12} "
-          f"{'Implied Vol':<15} {'Time (s)':<10}")
+    print(
+        f"{'Strike':<10} {'Moneyness':<12} {'Price':<15} {'Stderr':<12} "
+        f"{'Implied Vol':<15} {'Time (s)':<10}"
+    )
     print("-" * 100)
 
     results = []
@@ -64,32 +66,19 @@ def main():
 
         # Create model
         model = HestonModel(
-            S0=S0, r=r, T=T, kappa=kappa, theta=theta,
-            xi=xi, rho=rho, v0=v0, seed=seed
+            S0=S0, r=r, T=T, kappa=kappa, theta=theta, xi=xi, rho=rho, v0=v0, seed=seed
         )
 
         # Price option
         payoff = EuropeanCallPayoff(strike=K)
         engine = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            n_steps=n_steps,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, n_steps=n_steps, seed=seed
         )
         result = engine.price()
 
         # Compute implied volatility
         try:
-            iv = implied_vol(
-                price=result.price,
-                S0=S0,
-                K=K,
-                r=r,
-                T=T,
-                option_type="call",
-                tol=1e-6
-            )
+            iv = implied_vol(price=result.price, S0=S0, K=K, r=r, T=T, option_type="call", tol=1e-6)
         except ValueError as e:
             iv = np.nan
             print(f"Warning: Could not compute IV for K={K}: {e}")
@@ -97,26 +86,30 @@ def main():
         elapsed = time.time() - start_time
 
         moneyness = K / S0
-        print(f"{K:<10.1f} {moneyness:<12.4f} {result.price:<15.6f} "
-              f"{result.stderr:<12.6f} {iv:<15.6f} {elapsed:<10.2f}")
+        print(
+            f"{K:<10.1f} {moneyness:<12.4f} {result.price:<15.6f} "
+            f"{result.stderr:<12.6f} {iv:<15.6f} {elapsed:<10.2f}"
+        )
 
-        results.append({
-            'strike': K,
-            'moneyness': moneyness,
-            'price': result.price,
-            'stderr': result.stderr,
-            'iv': iv
-        })
+        results.append(
+            {
+                "strike": K,
+                "moneyness": moneyness,
+                "price": result.price,
+                "stderr": result.stderr,
+                "iv": iv,
+            }
+        )
 
     print("-" * 100)
 
     # Analysis
-    valid_ivs = [r['iv'] for r in results if not np.isnan(r['iv'])]
+    valid_ivs = [r["iv"] for r in results if not np.isnan(r["iv"])]
     if valid_ivs:
         print("\nImplied Volatility Statistics:")
         print(f"  Minimum IV:  {min(valid_ivs):.6f}")
         print(f"  Maximum IV:  {max(valid_ivs):.6f}")
-        atm_iv = [r['iv'] for r in results if abs(r['moneyness'] - 1.0) < 0.01][0]
+        atm_iv = [r["iv"] for r in results if abs(r["moneyness"] - 1.0) < 0.01][0]
         print(f"  ATM IV:      {atm_iv:.6f}")
         print(f"  Smile/Skew:  {max(valid_ivs) - min(valid_ivs):.6f}")
 

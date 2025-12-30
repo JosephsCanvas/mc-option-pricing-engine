@@ -21,7 +21,7 @@ def implied_vol(
     tol: float = 1e-8,
     max_iter: int = 200,
     sigma_low: float = 1e-6,
-    sigma_high: float = 5.0
+    sigma_high: float = 5.0,
 ) -> float:
     """
     Compute implied volatility using bisection method.

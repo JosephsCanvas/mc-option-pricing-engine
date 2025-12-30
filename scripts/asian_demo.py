@@ -62,21 +62,15 @@ def main():
     for n_paths in path_counts:
         for rng_type in ["pseudo", "sobol"]:
             # Create model
-            model = GeometricBrownianMotion(
-                S0=S0, r=r, sigma=sigma, T=T, seed=seed
-            )
+            model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
 
             # Create payoff and engine
             payoff = AsianArithmeticCallPayoff(strike=K)
-            engine = MonteCarloEngine(
-                model=model,
-                payoff=payoff,
-                n_paths=n_paths,
-                antithetic=False
-            )
+            engine = MonteCarloEngine(model=model, payoff=payoff, n_paths=n_paths, antithetic=False)
 
             # Time the pricing
             import time
+
             start = time.time()
             result = engine.price_path_dependent(n_steps=n_steps, rng_type=rng_type)
             elapsed = time.time() - start
@@ -115,14 +109,14 @@ def main():
     # Convergence rate
     print("\nConvergence (Pseudo-random):")
     for i in range(1, len(path_counts)):
-        n1, n2 = path_counts[i-1], path_counts[i]
+        n1, n2 = path_counts[i - 1], path_counts[i]
         stderr1 = results[(n1, "pseudo")].stderr
         stderr2 = results[(n2, "pseudo")].stderr
         ratio = stderr1 / stderr2
         expected_ratio = np.sqrt(n2 / n1)
         print(
             f"  {n1:>6} → {n2:>6}: stderr ratio = {ratio:.3f} "
-            f"(expected √{n2/n1:.1f} = {expected_ratio:.3f})"
+            f"(expected √{n2 / n1:.1f} = {expected_ratio:.3f})"
         )
 
     print("\n" + "=" * 80)

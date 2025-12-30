@@ -50,9 +50,7 @@ def main():
     for n_paths in n_paths_list:
         for method_name, antithetic, control_variate in methods:
             # Create model and payoff
-            model = GeometricBrownianMotion(
-                S0=S0, r=r, sigma=sigma, T=T, seed=seed
-            )
+            model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
             payoff = EuropeanCallPayoff(strike=K)
 
             # Create engine with specified variance reduction techniques
@@ -62,7 +60,7 @@ def main():
                 n_paths=n_paths,
                 antithetic=antithetic,
                 control_variate=control_variate,
-                seed=seed
+                seed=seed,
             )
 
             # Price the option

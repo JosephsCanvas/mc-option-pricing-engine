@@ -31,32 +31,16 @@ def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Benchmark Heston variance discretization schemes",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument("--n_paths", type=int, default=50000, help="Number of Monte Carlo paths")
+    parser.add_argument("--n_steps", type=int, default=200, help="Number of time steps")
     parser.add_argument(
-        "--n_paths",
-        type=int,
-        default=50000,
-        help="Number of Monte Carlo paths"
+        "--n_seeds", type=int, default=3, help="Number of random seeds for averaging"
     )
     parser.add_argument(
-        "--n_steps",
-        type=int,
-        default=200,
-        help="Number of time steps"
-    )
-    parser.add_argument(
-        "--n_seeds",
-        type=int,
-        default=3,
-        help="Number of random seeds for averaging"
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default="results",
-        help="Directory to save benchmark results"
+        "--output_dir", type=str, default="results", help="Directory to save benchmark results"
     )
 
     return parser.parse_args()
@@ -78,7 +62,7 @@ def compute_implied_vol_safe(s0, k, r, t, price, option_type="call"):  # noqa: N
             option_type=option_type,
             initial_guess=0.3,
             tol=1e-6,
-            max_iter=100
+            max_iter=100,
         )
         return iv if iv is not None else np.nan
     except Exception:
@@ -130,7 +114,7 @@ def run_benchmark(args):
             "n_seeds": args.n_seeds,
         },
         "strikes": strikes.tolist(),
-        "schemes": {}
+        "schemes": {},
     }
 
     schemes = ["full_truncation_euler", "qe"]
@@ -144,7 +128,7 @@ def run_benchmark(args):
             "prices": {str(K): [] for K in strikes},
             "stderrs": {str(K): [] for K in strikes},
             "impl_vols": {str(K): [] for K in strikes},
-            "runtimes": {str(K): [] for K in strikes}
+            "runtimes": {str(K): [] for K in strikes},
         }
 
         for seed_idx in range(args.n_seeds):
@@ -163,16 +147,13 @@ def run_benchmark(args):
                     rho=rho,
                     v0=v0,
                     seed=seed,
-                    scheme=scheme
+                    scheme=scheme,
                 )
 
                 # Create payoff and engine
                 payoff = EuropeanCallPayoff(K=K)
                 engine = HestonMonteCarloEngine(
-                    model=model,
-                    payoff=payoff,
-                    n_paths=args.n_paths,
-                    n_steps=args.n_steps
+                    model=model, payoff=payoff, n_paths=args.n_paths, n_steps=args.n_steps
                 )
 
                 # Price option and time it
@@ -197,20 +178,16 @@ def run_benchmark(args):
 
         # Compute aggregated statistics
         scheme_results["mean_prices"] = {
-            str(K): float(np.mean(scheme_results["prices"][str(K)]))
-            for K in strikes
+            str(K): float(np.mean(scheme_results["prices"][str(K)])) for K in strikes
         }
         scheme_results["mean_stderrs"] = {
-            str(K): float(np.mean(scheme_results["stderrs"][str(K)]))
-            for K in strikes
+            str(K): float(np.mean(scheme_results["stderrs"][str(K)])) for K in strikes
         }
         scheme_results["mean_impl_vols"] = {
-            str(K): float(np.nanmean(scheme_results["impl_vols"][str(K)]))
-            for K in strikes
+            str(K): float(np.nanmean(scheme_results["impl_vols"][str(K)])) for K in strikes
         }
         scheme_results["mean_runtimes"] = {
-            str(K): float(np.mean(scheme_results["runtimes"][str(K)]))
-            for K in strikes
+            str(K): float(np.mean(scheme_results["runtimes"][str(K)])) for K in strikes
         }
         scheme_results["total_runtime"] = float(
             np.sum([np.sum(scheme_results["runtimes"][str(K)]) for K in strikes])
@@ -218,9 +195,7 @@ def run_benchmark(args):
 
         # Compute smile width (max - min IV)
         valid_ivs = [
-            iv for K in strikes
-            for iv in scheme_results["impl_vols"][str(K)]
-            if not np.isnan(iv)
+            iv for K in strikes for iv in scheme_results["impl_vols"][str(K)] if not np.isnan(iv)
         ]
         if valid_ivs:
             scheme_results["smile_width"] = float(np.max(valid_ivs) - np.min(valid_ivs))
@@ -246,23 +221,14 @@ def run_benchmark(args):
         qe_price = results["schemes"]["qe"]["mean_prices"][str(K)]
         price_diff = qe_price - ft_price
 
-        print(
-            f"{K:<8.0f} {ft_iv:<15.6f} {qe_iv:<15.6f} "
-            f"{iv_diff:<12.6f} {price_diff:<12.6f}"
-        )
+        print(f"{K:<8.0f} {ft_iv:<15.6f} {qe_iv:<15.6f} {iv_diff:<12.6f} {price_diff:<12.6f}")
 
     print("\nSmile Width:")
-    print(
-        f"  FT Euler: "
-        f"{results['schemes']['full_truncation_euler']['smile_width']:.6f}"
-    )
+    print(f"  FT Euler: {results['schemes']['full_truncation_euler']['smile_width']:.6f}")
     print(f"  QE:       {results['schemes']['qe']['smile_width']:.6f}")
 
     print("\nTotal Runtime:")
-    print(
-        f"  FT Euler: "
-        f"{results['schemes']['full_truncation_euler']['total_runtime']:.3f}s"
-    )
+    print(f"  FT Euler: {results['schemes']['full_truncation_euler']['total_runtime']:.3f}s")
     print(f"  QE:       {results['schemes']['qe']['total_runtime']:.3f}s")
 
     # Save results to JSON
@@ -308,16 +274,12 @@ def run_benchmark(args):
             )
 
         f.write("\nSmile Width:\n")
-        f.write(
-            f"  FT Euler: "
-            f"{results['schemes']['full_truncation_euler']['smile_width']:.6f}\n"
-        )
+        f.write(f"  FT Euler: {results['schemes']['full_truncation_euler']['smile_width']:.6f}\n")
         f.write(f"  QE:       {results['schemes']['qe']['smile_width']:.6f}\n")
 
         f.write("\nTotal Runtime:\n")
         f.write(
-            f"  FT Euler: "
-            f"{results['schemes']['full_truncation_euler']['total_runtime']:.3f}s\n"
+            f"  FT Euler: {results['schemes']['full_truncation_euler']['total_runtime']:.3f}s\n"
         )
         f.write(f"  QE:       {results['schemes']['qe']['total_runtime']:.3f}s\n")
 

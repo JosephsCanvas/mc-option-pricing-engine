@@ -67,38 +67,41 @@ def inverse_normal_cdf(u: np.ndarray) -> np.ndarray:
     u = np.clip(u, 1e-10, 1 - 1e-10)
 
     # Coefficients for rational approximation
-    a = np.array([
-        -3.969683028665376e+01,
-        2.209460984245205e+02,
-        -2.759285104469687e+02,
-        1.383577518672690e+02,
-        -3.066479806614716e+01,
-        2.506628277459239e+00
-    ])
+    a = np.array(
+        [
+            -3.969683028665376e01,
+            2.209460984245205e02,
+            -2.759285104469687e02,
+            1.383577518672690e02,
+            -3.066479806614716e01,
+            2.506628277459239e00,
+        ]
+    )
 
-    b = np.array([
-        -5.447609879822406e+01,
-        1.615858368580409e+02,
-        -1.556989798598866e+02,
-        6.680131188771972e+01,
-        -1.328068155288572e+01
-    ])
+    b = np.array(
+        [
+            -5.447609879822406e01,
+            1.615858368580409e02,
+            -1.556989798598866e02,
+            6.680131188771972e01,
+            -1.328068155288572e01,
+        ]
+    )
 
-    c = np.array([
-        -7.784894002430293e-03,
-        -3.223964580411365e-01,
-        -2.400758277161838e+00,
-        -2.549732539343734e+00,
-        4.374664141464968e+00,
-        2.938163982698783e+00
-    ])
+    c = np.array(
+        [
+            -7.784894002430293e-03,
+            -3.223964580411365e-01,
+            -2.400758277161838e00,
+            -2.549732539343734e00,
+            4.374664141464968e00,
+            2.938163982698783e00,
+        ]
+    )
 
-    d = np.array([
-        7.784695709041462e-03,
-        3.224671290700398e-01,
-        2.445134137142996e+00,
-        3.754408661907416e+00
-    ])
+    d = np.array(
+        [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e00, 3.754408661907416e00]
+    )
 
     # Define break-points
     u_low = 0.02425
@@ -111,9 +114,9 @@ def inverse_normal_cdf(u: np.ndarray) -> np.ndarray:
     mask_low = u < u_low
     if np.any(mask_low):
         q = np.sqrt(-2.0 * np.log(u[mask_low]))
-        z[mask_low] = (
-            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
-        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+        z[mask_low] = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0
+        )
 
     # Region 2: u_low <= u <= u_high (central region)
     mask_central = (u >= u_low) & (u <= u_high)
@@ -121,20 +124,16 @@ def inverse_normal_cdf(u: np.ndarray) -> np.ndarray:
         q = u[mask_central] - 0.5
         r = q * q
         z[mask_central] = (
-            (
-                (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5])
-                * q
-            )
-            / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
-        )
+            (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q
+        ) / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
 
     # Region 3: u > u_high (upper tail)
     mask_high = u > u_high
     if np.any(mask_high):
         q = np.sqrt(-2.0 * np.log(1.0 - u[mask_high]))
-        z[mask_high] = -(
-            ((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]
-        ) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+        z[mask_high] = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / (
+            (((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0
+        )
 
     return z
 
@@ -165,12 +164,7 @@ class SobolGenerator:
     provides scrambling benefits.
     """
 
-    def __init__(
-        self,
-        dimension: int,
-        seed: int | None = None,
-        scramble: bool = False
-    ):
+    def __init__(self, dimension: int, seed: int | None = None, scramble: bool = False):
         """Initialize Sobol generator."""
         if dimension < 1 or dimension > 21:
             raise ValueError("dimension must be between 1 and 21")
@@ -341,4 +335,3 @@ class SobolGenerator:
     def reset(self):
         """Reset the generator to start from the beginning of the sequence."""
         self._index = 0
-

@@ -58,6 +58,7 @@ class ExperimentConfig:
     lsm_basis : str
         LSM basis functions: 'poly2' or 'poly3' (American only)
     """
+
     name: str
     model: str
     option_type: str
@@ -85,6 +86,7 @@ class ExperimentConfig:
 @dataclass
 class GreeksData:
     """Greeks computation results."""
+
     delta: float | None = None
     delta_stderr: float | None = None
     vega: float | None = None
@@ -99,6 +101,7 @@ class ExperimentMetadata:
 
     Captures environment and configuration for full reproducibility.
     """
+
     timestamp: str
     python_version: str
     numpy_version: str
@@ -153,6 +156,7 @@ class ExperimentResult:
     notes : str
         Additional notes or method description
     """
+
     config_name: str
     price: float
     stderr: float
@@ -200,7 +204,7 @@ class ExperimentResult:
                 "antithetic": self.metadata.antithetic,
                 "control_variate": self.metadata.control_variate,
                 "compute_greeks": self.metadata.compute_greeks,
-            }
+            },
         }
 
         if self.greeks is not None:

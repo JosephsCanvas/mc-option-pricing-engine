@@ -58,11 +58,7 @@ def benchmark_gbm():
             # Create payoff and engine
             payoff = EuropeanCallPayoff(strike=K)
             engine = MonteCarloEngine(
-                model=model,
-                payoff=payoff,
-                n_paths=n_paths,
-                antithetic=False,
-                control_variate=False
+                model=model, payoff=payoff, n_paths=n_paths, antithetic=False, control_variate=False
             )
 
             # Time the pricing
@@ -74,8 +70,7 @@ def benchmark_gbm():
             error = abs(result.price - ref_price)
 
             print(
-                f"{n_paths:<10} {rng_type:<8} {result.price:<12.6f} "
-                f"{error:<12.6f} {elapsed:<10.4f}"
+                f"{n_paths:<10} {rng_type:<8} {result.price:<12.6f} {error:<12.6f} {elapsed:<10.4f}"
             )
 
 
@@ -101,16 +96,22 @@ def benchmark_heston():
     # Reference price using high path count pseudo-random
     print("\nComputing reference price (1M paths, pseudo-random)...")
     ref_model = HestonModel(
-        S0=S0, r=r, T=T, kappa=kappa, theta=theta, xi=xi, rho=rho, v0=v0,
-        seed=seed, scheme="qe", rng_type="pseudo", scramble=False
+        S0=S0,
+        r=r,
+        T=T,
+        kappa=kappa,
+        theta=theta,
+        xi=xi,
+        rho=rho,
+        v0=v0,
+        seed=seed,
+        scheme="qe",
+        rng_type="pseudo",
+        scramble=False,
     )
     ref_payoff = EuropeanCallPayoff(strike=K)
     ref_engine = HestonMonteCarloEngine(
-        model=ref_model,
-        payoff=ref_payoff,
-        n_paths=1000000,
-        n_steps=n_steps,
-        antithetic=False
+        model=ref_model, payoff=ref_payoff, n_paths=1000000, n_steps=n_steps, antithetic=False
     )
     ref_result = ref_engine.price()
     ref_price = ref_result.price
@@ -126,18 +127,24 @@ def benchmark_heston():
         for rng_type in ["pseudo", "sobol"]:
             # Create model
             model = HestonModel(
-                S0=S0, r=r, T=T, kappa=kappa, theta=theta, xi=xi, rho=rho, v0=v0,
-                seed=seed, scheme="qe", rng_type=rng_type, scramble=False
+                S0=S0,
+                r=r,
+                T=T,
+                kappa=kappa,
+                theta=theta,
+                xi=xi,
+                rho=rho,
+                v0=v0,
+                seed=seed,
+                scheme="qe",
+                rng_type=rng_type,
+                scramble=False,
             )
 
             # Create payoff and engine
             payoff = EuropeanCallPayoff(strike=K)
             engine = HestonMonteCarloEngine(
-                model=model,
-                payoff=payoff,
-                n_paths=n_paths,
-                n_steps=n_steps,
-                antithetic=False
+                model=model, payoff=payoff, n_paths=n_paths, n_steps=n_steps, antithetic=False
             )
 
             # Time the pricing
@@ -149,8 +156,7 @@ def benchmark_heston():
             error = abs(result.price - ref_price)
 
             print(
-                f"{n_paths:<10} {rng_type:<8} {result.price:<12.6f} "
-                f"{error:<12.6f} {elapsed:<10.4f}"
+                f"{n_paths:<10} {rng_type:<8} {result.price:<12.6f} {error:<12.6f} {elapsed:<10.4f}"
             )
 
 

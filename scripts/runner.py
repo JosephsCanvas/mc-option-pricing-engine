@@ -44,7 +44,7 @@ def get_european_call_bench() -> ExperimentConfig:
         seeds=[42, 123, 456],
         antithetic=False,
         control_variate=False,
-        compute_greeks=False
+        compute_greeks=False,
     )
 
 
@@ -71,7 +71,7 @@ def get_heston_smile_bench() -> ExperimentConfig:
         n_paths_list=[50000],
         n_steps=200,
         seeds=[42],
-        antithetic=True
+        antithetic=True,
     )
 
 
@@ -160,7 +160,7 @@ def run_heston_smile_benchmark(results_dir: Path) -> None:
                     r=base_config.r,
                     T=base_config.T,
                     option_type="call",
-                    tol=1e-6
+                    tol=1e-6,
                 )
                 r.implied_vol = iv
                 r.notes = f"K={strike:.0f}, IV={iv:.4f}"
@@ -194,7 +194,7 @@ def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Run reproducible experiments",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -202,14 +202,11 @@ def main():
         type=str,
         required=True,
         choices=["european_call_bench", "heston_smile_bench", "all"],
-        help="Experiment to run"
+        help="Experiment to run",
     )
 
     parser.add_argument(
-        "--results_dir",
-        type=Path,
-        default=Path("results"),
-        help="Directory for results output"
+        "--results_dir", type=Path, default=Path("results"), help="Directory for results output"
     )
 
     args = parser.parse_args()
