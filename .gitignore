@@ -11,12 +11,18 @@ __pycache__/
 venv/
 ENV/
 env/
+Lib/
 
 # Windows / accidental binaries
 *.exe
 
 # Generated plots
 plots/
+
+# Generated results and artifacts
+results/
+test_results/
+*.json
 
 # Distribution / packaging
 .Python
