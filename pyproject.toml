@@ -6,11 +6,24 @@ build-backend = "setuptools.build_meta"
 name = "mc-pricer"
 version = "0.1.0"
 description = "Production-grade Monte Carlo option pricing engine with variance reduction, Greeks, and stochastic volatility models"
+description = "Production-grade Monte Carlo option pricing engine with variance reduction, Greeks, and stochastic volatility models"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Joseph Butler"}
+    {name = "Joseph Butler"}
+]
+keywords = [
+    "finance",
+    "options",
+    "monte-carlo",
+    "pricing",
+    "quantitative",
+    "derivatives",
+    "heston",
+    "black-scholes",
+    "greeks",
 ]
 keywords = [
     "finance",
@@ -25,6 +38,7 @@ keywords = [
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
@@ -32,6 +46,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Office/Business :: Financial :: Investment",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Office/Business :: Financial :: Investment",
 ]
@@ -45,7 +61,18 @@ dev = [
     "ruff>=0.1.0",
     "build>=1.0.0",
     "twine>=4.0.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
 ]
+
+[project.scripts]
+mc-price = "mc_pricer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/JosephsCanvas/mc-option-pricing-engine"
+Documentation = "https://github.com/JosephsCanvas/mc-option-pricing-engine#readme"
+Repository = "https://github.com/JosephsCanvas/mc-option-pricing-engine.git"
+Issues = "https://github.com/JosephsCanvas/mc-option-pricing-engine/issues"
 
 [project.scripts]
 mc-price = "mc_pricer.cli:main"
