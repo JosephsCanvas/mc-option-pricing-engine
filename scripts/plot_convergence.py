@@ -62,9 +62,7 @@ def main():
 
             for seed in seeds:
                 # Create model with seed
-                model = GeometricBrownianMotion(
-                    S0=S0, r=r, sigma=sigma, T=T, seed=seed
-                )
+                model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
                 payoff = EuropeanCallPayoff(strike=K)
 
                 # Create engine
@@ -74,7 +72,7 @@ def main():
                     n_paths=n_paths,
                     antithetic=antithetic,
                     control_variate=control_variate,
-                    seed=seed
+                    seed=seed,
                 )
 
                 # Price and record stderr
@@ -99,13 +97,13 @@ def main():
     # Add theoretical O(1/√n) reference line
     n_ref = np.array([n_paths_grid[0], n_paths_grid[-1]])
     stderr_ref = results["Plain MC"][0] * np.sqrt(n_paths_grid[0] / n_ref)
-    plt.loglog(n_ref, stderr_ref, 'k--', alpha=0.5, linewidth=1.5, label='O(1/√n) reference')
+    plt.loglog(n_ref, stderr_ref, "k--", alpha=0.5, linewidth=1.5, label="O(1/√n) reference")
 
-    plt.xlabel('Number of Paths', fontsize=12)
-    plt.ylabel('Standard Error', fontsize=12)
-    plt.title('Monte Carlo Convergence (Standard Error vs Paths)', fontsize=14, fontweight='bold')
-    plt.legend(fontsize=10, loc='upper right')
-    plt.grid(True, alpha=0.3, which='both', linestyle=':')
+    plt.xlabel("Number of Paths", fontsize=12)
+    plt.ylabel("Standard Error", fontsize=12)
+    plt.title("Monte Carlo Convergence (Standard Error vs Paths)", fontsize=14, fontweight="bold")
+    plt.legend(fontsize=10, loc="upper right")
+    plt.grid(True, alpha=0.3, which="both", linestyle=":")
     plt.tight_layout()
 
     # Create plots directory if it doesn't exist
@@ -114,7 +112,7 @@ def main():
 
     # Save plot
     output_path = plots_dir / "convergence_stderr.png"
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     print(f"\nPlot saved to: {output_path}")
 
     # Show plot

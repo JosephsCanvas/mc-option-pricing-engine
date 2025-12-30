@@ -262,9 +262,7 @@ class HestonCalibrator:
     def _params_hash(self, params_dict: dict[str, float]) -> str:
         """Compute hash of parameters for caching."""
         # Round to reasonable precision for hash stability
-        param_str = ",".join(
-            f"{name}={params_dict[name]:.8f}" for name in self.param_names
-        )
+        param_str = ",".join(f"{name}={params_dict[name]:.8f}" for name in self.param_names)
         return hashlib.md5(param_str.encode()).hexdigest()[:16]
 
     def _get_cached_or_price(
@@ -546,9 +544,7 @@ class HestonCalibrator:
 
         return simplex[0], f_values[0], history
 
-    def calibrate(
-        self, initial_guess: dict[str, float] | None = None
-    ) -> CalibrationResult:
+    def calibrate(self, initial_guess: dict[str, float] | None = None) -> CalibrationResult:
         """Run calibration with random restarts.
 
         Parameters
@@ -571,8 +567,7 @@ class HestonCalibrator:
         if initial_guess is None:
             # Use midpoint of bounds
             initial_guess = {
-                name: (bounds[0] + bounds[1]) / 2
-                for name, bounds in self.config.bounds.items()
+                name: (bounds[0] + bounds[1]) / 2 for name, bounds in self.config.bounds.items()
             }
 
         x0 = self._dict_to_params(initial_guess)
@@ -593,9 +588,7 @@ class HestonCalibrator:
                 x_init = np.array(
                     [
                         rng.uniform(bounds[0], bounds[1])
-                        for name, bounds in [
-                            (n, self.config.bounds[n]) for n in self.param_names
-                        ]
+                        for name, bounds in [(n, self.config.bounds[n]) for n in self.param_names]
                     ]
                 )
 
@@ -620,13 +613,10 @@ class HestonCalibrator:
 
         # Compute final fitted vols and residuals
         best_params_dict = self._params_to_dict(best_params)
-        fitted_vols = self._compute_fitted_vols(
-            best_params_dict, self.config.seeds[0]
-        )
+        fitted_vols = self._compute_fitted_vols(best_params_dict, self.config.seeds[0])
         target_vols = [q.implied_vol for q in self.quotes]
         residuals = [
-            fv - tv if not np.isnan(fv) else np.nan
-            for fv, tv in zip(fitted_vols, target_vols)
+            fv - tv if not np.isnan(fv) else np.nan for fv, tv in zip(fitted_vols, target_vols)
         ]
 
         # Build diagnostics

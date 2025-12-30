@@ -61,15 +61,11 @@ def main():
 
         # Create engine with control variate for better convergence
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
         # Compute pathwise Greeks
-        greeks = engine.compute_greeks(option_type='call', method='pw')
+        greeks = engine.compute_greeks(option_type="call", method="pw")
 
         # Extract results
         delta = greeks.delta.value
@@ -100,20 +96,12 @@ def main():
     model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
     payoff = EuropeanCallPayoff(strike=K)
     engine = MonteCarloEngine(
-        model=model,
-        payoff=payoff,
-        n_paths=n_paths,
-        control_variate=True,
-        seed=seed
+        model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
     )
 
     # Compute FD Greeks
     greeks_fd = engine.compute_greeks(
-        option_type='call',
-        method='fd',
-        fd_seeds=10,
-        fd_step_spot=1e-4,
-        fd_step_sigma=1e-4
+        option_type="call", method="fd", fd_seeds=10, fd_step_spot=1e-4, fd_step_sigma=1e-4
     )
 
     print("\nMethod: Finite Difference")

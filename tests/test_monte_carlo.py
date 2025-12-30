@@ -162,8 +162,7 @@ class TestMonteCarloEngine:
         # Control variate MC
         model_cv = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         engine_cv = MonteCarloEngine(
-            model=model_cv, payoff=payoff, n_paths=n_paths,
-            control_variate=True, seed=seed
+            model=model_cv, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
         result_cv = engine_cv.price()
 
@@ -190,8 +189,7 @@ class TestMonteCarloEngine:
         # Control variate MC
         model_cv = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         engine_cv = MonteCarloEngine(
-            model=model_cv, payoff=payoff, n_paths=n_paths,
-            control_variate=True, seed=seed
+            model=model_cv, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
         result_cv = engine_cv.price()
 
@@ -210,8 +208,12 @@ class TestMonteCarloEngine:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanCallPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model, payoff=payoff, n_paths=n_paths,
-            antithetic=True, control_variate=True, seed=seed
+            model=model,
+            payoff=payoff,
+            n_paths=n_paths,
+            antithetic=True,
+            control_variate=True,
+            seed=seed,
         )
         result = engine.price()
 
@@ -223,10 +225,7 @@ class TestMonteCarloEngine:
         """Test that beta is None when control variate is not used."""
         model = GeometricBrownianMotion(S0=100, r=0.05, sigma=0.2, T=1.0, seed=42)
         payoff = EuropeanCallPayoff(strike=100)
-        engine = MonteCarloEngine(
-            model=model, payoff=payoff, n_paths=10000, control_variate=False
-        )
+        engine = MonteCarloEngine(model=model, payoff=payoff, n_paths=10000, control_variate=False)
         result = engine.price()
 
         assert result.control_variate_beta is None
-

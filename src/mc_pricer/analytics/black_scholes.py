@@ -44,14 +44,7 @@ def norm_pdf(x: float) -> float:
     return math.exp(-0.5 * x**2) / math.sqrt(2.0 * math.pi)
 
 
-def bs_price(
-    S0: float,
-    K: float,
-    r: float,
-    T: float,
-    sigma: float,
-    option_type: str
-) -> float:
+def bs_price(S0: float, K: float, r: float, T: float, sigma: float, option_type: str) -> float:
     """
     Compute European option price using Black-Scholes formula.
 
@@ -120,14 +113,7 @@ def bs_price(
     return price
 
 
-def bs_delta(
-    S0: float,
-    K: float,
-    r: float,
-    T: float,
-    sigma: float,
-    option_type: str
-) -> float:
+def bs_delta(S0: float, K: float, r: float, T: float, sigma: float, option_type: str) -> float:
     """
     Compute Delta for European option using Black-Scholes formula.
 
@@ -270,14 +256,7 @@ def bs_vega(S0: float, K: float, r: float, T: float, sigma: float) -> float:
     return vega
 
 
-def bs_theta(
-    S0: float,
-    K: float,
-    r: float,
-    T: float,
-    sigma: float,
-    option_type: str
-) -> float:
+def bs_theta(S0: float, K: float, r: float, T: float, sigma: float, option_type: str) -> float:
     """
     Compute Theta for European option using Black-Scholes formula.
 
@@ -348,14 +327,7 @@ def bs_theta(
     return theta
 
 
-def bs_rho(
-    S0: float,
-    K: float,
-    r: float,
-    T: float,
-    sigma: float,
-    option_type: str
-) -> float:
+def bs_rho(S0: float, K: float, r: float, T: float, sigma: float, option_type: str) -> float:
     """
     Compute Rho for European option using Black-Scholes formula.
 

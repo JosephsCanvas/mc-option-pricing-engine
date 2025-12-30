@@ -271,9 +271,7 @@ def run_calibration(fast_mode: bool = False, output_path: str | None = None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Calibrate Heston model to synthetic surface"
-    )
+    parser = argparse.ArgumentParser(description="Calibrate Heston model to synthetic surface")
     parser.add_argument(
         "--fast",
         action="store_true",

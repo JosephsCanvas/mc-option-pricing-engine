@@ -23,7 +23,7 @@ class TestLSMBasics:
             n_paths=10000,
             n_steps=50,
             basis="poly2",
-            seed=42
+            seed=42,
         )
         assert result.price > 0
         assert result.stderr > 0
@@ -42,7 +42,7 @@ class TestLSMBasics:
             n_paths=10000,
             n_steps=50,
             basis="poly2",
-            seed=42
+            seed=42,
         )
         assert result.price > 0
         assert result.stderr > 0
@@ -58,7 +58,7 @@ class TestLSMBasics:
             n_paths=10000,
             n_steps=50,
             basis="poly3",
-            seed=42
+            seed=42,
         )
         assert result.price > 0
         assert result.basis == "poly3"
@@ -68,11 +68,7 @@ class TestLSMBasics:
         model = GeometricBrownianMotion(S0=100, r=0.05, sigma=0.2, T=1.0, seed=42)
         with pytest.raises(ValueError, match="Strike must be positive"):
             price_american_lsm(
-                model=model,
-                strike=-100,
-                option_type="put",
-                n_paths=1000,
-                n_steps=50
+                model=model, strike=-100, option_type="put", n_paths=1000, n_steps=50
             )
 
     def test_invalid_option_type(self):
@@ -80,11 +76,7 @@ class TestLSMBasics:
         model = GeometricBrownianMotion(S0=100, r=0.05, sigma=0.2, T=1.0, seed=42)
         with pytest.raises(ValueError, match="option_type must be"):
             price_american_lsm(
-                model=model,
-                strike=100,
-                option_type="invalid",
-                n_paths=1000,
-                n_steps=50
+                model=model, strike=100, option_type="invalid", n_paths=1000, n_steps=50
             )
 
     def test_invalid_basis(self):
@@ -97,7 +89,7 @@ class TestLSMBasics:
                 option_type="put",
                 n_paths=1000,
                 n_steps=50,
-                basis="invalid"
+                basis="invalid",
             )
 
 
@@ -119,7 +111,7 @@ class TestAmericanVsEuropean:
             payoff=payoff_euro,
             n_paths=n_paths,
             antithetic=False,
-            control_variate=False
+            control_variate=False,
         )
         result_euro = engine_euro.price()
 
@@ -132,7 +124,7 @@ class TestAmericanVsEuropean:
             n_paths=n_paths,
             n_steps=n_steps,
             basis="poly2",
-            seed=seed
+            seed=seed,
         )
 
         # American should be >= European (allowing small negative tolerance for MC error)
@@ -156,7 +148,7 @@ class TestAmericanVsEuropean:
             payoff=payoff_euro,
             n_paths=n_paths,
             antithetic=False,
-            control_variate=False
+            control_variate=False,
         )
         result_euro = engine_euro.price()
 
@@ -169,7 +161,7 @@ class TestAmericanVsEuropean:
             n_paths=n_paths,
             n_steps=n_steps,
             basis="poly2",
-            seed=seed
+            seed=seed,
         )
 
         # Should be approximately equal (within 3*stderr + small constant)
@@ -202,7 +194,7 @@ class TestMonotonicity:
                 n_paths=n_paths,
                 n_steps=n_steps,
                 basis="poly2",
-                seed=seed
+                seed=seed,
             )
             prices.append(result.price)
 
@@ -232,7 +224,7 @@ class TestMonotonicity:
                 n_paths=n_paths,
                 n_steps=n_steps,
                 basis="poly2",
-                seed=seed
+                seed=seed,
             )
             prices.append(result.price)
 
@@ -259,7 +251,7 @@ class TestReproducibility:
             n_paths=10000,
             n_steps=50,
             basis="poly2",
-            seed=42
+            seed=42,
         )
 
         model2 = GeometricBrownianMotion(S0=100, r=0.05, sigma=0.2, T=1.0, seed=42)
@@ -270,7 +262,7 @@ class TestReproducibility:
             n_paths=10000,
             n_steps=50,
             basis="poly2",
-            seed=42
+            seed=42,
         )
 
         assert result1.price == result2.price

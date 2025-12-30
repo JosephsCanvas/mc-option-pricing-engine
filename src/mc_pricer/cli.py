@@ -296,11 +296,7 @@ def main(args: list[str] | None = None) -> int:
         print(f"  LSM Time Steps:         {parsed.lsm_steps}")
         print(f"  LSM Basis Functions:    {parsed.lsm_basis}")
     print(f"  Antithetic Variates:    {parsed.antithetic}")
-    if (
-        parsed.product == "european"
-        and parsed.style == "european"
-        and parsed.model == "gbm"
-    ):
+    if parsed.product == "european" and parsed.style == "european" and parsed.model == "gbm":
         print(f"  Control Variate:        {parsed.control_variate}")
     seed_str = parsed.seed if parsed.seed is not None else "None (random)"
     print(f"  Random Seed:            {seed_str}")
@@ -514,38 +510,26 @@ def main(args: list[str] | None = None) -> int:
             print("\nGreeks (Pathwise):")
             if parsed.greeks in ["delta", "all"] and greeks_pw.delta is not None:
                 print(
-                    f"  Delta:  {greeks_pw.delta.value:.6f} "
-                    f"± {greeks_pw.delta.standard_error:.6f}"
+                    f"  Delta:  {greeks_pw.delta.value:.6f} ± {greeks_pw.delta.standard_error:.6f}"
                 )
                 print(
-                    f"    95% CI: [{greeks_pw.delta.ci_lower:.6f}, "
-                    f"{greeks_pw.delta.ci_upper:.6f}]"
+                    f"    95% CI: [{greeks_pw.delta.ci_lower:.6f}, {greeks_pw.delta.ci_upper:.6f}]"
                 )
             if parsed.greeks in ["vega", "all"] and greeks_pw.vega is not None:
-                print(
-                    f"  Vega:   {greeks_pw.vega.value:.4f} ± {greeks_pw.vega.standard_error:.4f}"
-                )
-                print(
-                    f"    95% CI: [{greeks_pw.vega.ci_lower:.4f}, {greeks_pw.vega.ci_upper:.4f}]"
-                )
+                print(f"  Vega:   {greeks_pw.vega.value:.4f} ± {greeks_pw.vega.standard_error:.4f}")
+                print(f"    95% CI: [{greeks_pw.vega.ci_lower:.4f}, {greeks_pw.vega.ci_upper:.4f}]")
 
             print("\nGreeks (Finite Difference):")
             if parsed.greeks in ["delta", "all"] and greeks_fd.delta is not None:
                 print(
-                    f"  Delta:  {greeks_fd.delta.value:.6f} "
-                    f"± {greeks_fd.delta.standard_error:.6f}"
+                    f"  Delta:  {greeks_fd.delta.value:.6f} ± {greeks_fd.delta.standard_error:.6f}"
                 )
                 print(
-                    f"    95% CI: [{greeks_fd.delta.ci_lower:.6f}, "
-                    f"{greeks_fd.delta.ci_upper:.6f}]"
+                    f"    95% CI: [{greeks_fd.delta.ci_lower:.6f}, {greeks_fd.delta.ci_upper:.6f}]"
                 )
             if parsed.greeks in ["vega", "all"] and greeks_fd.vega is not None:
-                print(
-                    f"  Vega:   {greeks_fd.vega.value:.4f} ± {greeks_fd.vega.standard_error:.4f}"
-                )
-                print(
-                    f"    95% CI: [{greeks_fd.vega.ci_lower:.4f}, {greeks_fd.vega.ci_upper:.4f}]"
-                )
+                print(f"  Vega:   {greeks_fd.vega.value:.4f} ± {greeks_fd.vega.standard_error:.4f}")
+                print(f"    95% CI: [{greeks_fd.vega.ci_lower:.4f}, {greeks_fd.vega.ci_upper:.4f}]")
 
         else:
             # Compute single method

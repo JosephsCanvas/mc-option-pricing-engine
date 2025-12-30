@@ -55,9 +55,7 @@ def load_quotes_from_csv(csv_path: str) -> list[MarketQuote]:
             implied_vol = float(row["implied_vol"])
 
             # Bid-ask width is optional
-            bid_ask_width = (
-                float(row["bid_ask_width"]) if "bid_ask_width" in row else None
-            )
+            bid_ask_width = float(row["bid_ask_width"]) if "bid_ask_width" in row else None
 
             quotes.append(
                 MarketQuote(
@@ -103,10 +101,7 @@ def calibrate_from_csv(
     # Show quote summary
     strikes = sorted(set(q.strike for q in quotes))
     maturities = sorted(set(q.maturity for q in quotes))
-    print(
-        f"Unique strikes: {len(strikes)} "
-        f"(range: {min(strikes):.2f} - {max(strikes):.2f})"
-    )
+    print(f"Unique strikes: {len(strikes)} (range: {min(strikes):.2f} - {max(strikes):.2f})")
     print(
         f"Unique maturities: {len(maturities)} "
         f"(range: {min(maturities):.2f} - {max(maturities):.2f})"

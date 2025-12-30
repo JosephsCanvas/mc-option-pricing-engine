@@ -38,15 +38,7 @@ class TestHestonModel:
     def test_no_nans(self):
         """Test that simulated prices are finite (no NaNs or Infs)."""
         model = HestonModel(
-            S0=100.0,
-            r=0.05,
-            T=1.0,
-            kappa=2.0,
-            theta=0.04,
-            xi=0.3,
-            rho=-0.7,
-            v0=0.04,
-            seed=42
+            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04, seed=42
         )
 
         terminal = model.simulate_terminal(n_paths=10000, n_steps=100)
@@ -57,15 +49,7 @@ class TestHestonModel:
     def test_paths_shape(self):
         """Test that simulate_paths returns correct shape."""
         model = HestonModel(
-            S0=100.0,
-            r=0.05,
-            T=1.0,
-            kappa=2.0,
-            theta=0.04,
-            xi=0.3,
-            rho=-0.7,
-            v0=0.04,
-            seed=42
+            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04, seed=42
         )
 
         n_paths = 100
@@ -78,15 +62,7 @@ class TestHestonModel:
     def test_antithetic_variates(self):
         """Test antithetic variates functionality."""
         model = HestonModel(
-            S0=100.0,
-            r=0.05,
-            T=1.0,
-            kappa=2.0,
-            theta=0.04,
-            xi=0.3,
-            rho=-0.7,
-            v0=0.04,
-            seed=42
+            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04, seed=42
         )
 
         # Test with even number of paths
@@ -102,38 +78,31 @@ class TestHestonModel:
         """Test that invalid parameters raise errors."""
         # Negative S0
         with pytest.raises(ValueError, match="S0 must be positive"):
-            HestonModel(S0=-100, r=0.05, T=1.0, kappa=2.0, theta=0.04,
-                       xi=0.3, rho=-0.7, v0=0.04)
+            HestonModel(S0=-100, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04)
 
         # Negative T
         with pytest.raises(ValueError, match="T must be positive"):
-            HestonModel(S0=100, r=0.05, T=-1.0, kappa=2.0, theta=0.04,
-                       xi=0.3, rho=-0.7, v0=0.04)
+            HestonModel(S0=100, r=0.05, T=-1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04)
 
         # Negative kappa
         with pytest.raises(ValueError, match="kappa must be positive"):
-            HestonModel(S0=100, r=0.05, T=1.0, kappa=-2.0, theta=0.04,
-                       xi=0.3, rho=-0.7, v0=0.04)
+            HestonModel(S0=100, r=0.05, T=1.0, kappa=-2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04)
 
         # Negative theta
         with pytest.raises(ValueError, match="theta must be positive"):
-            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=-0.04,
-                       xi=0.3, rho=-0.7, v0=0.04)
+            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=-0.04, xi=0.3, rho=-0.7, v0=0.04)
 
         # Negative xi
         with pytest.raises(ValueError, match="xi must be non-negative"):
-            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=0.04,
-                       xi=-0.3, rho=-0.7, v0=0.04)
+            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=-0.3, rho=-0.7, v0=0.04)
 
         # Invalid rho
         with pytest.raises(ValueError, match="rho must be in"):
-            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=0.04,
-                       xi=0.3, rho=-1.5, v0=0.04)
+            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-1.5, v0=0.04)
 
         # Negative v0
         with pytest.raises(ValueError, match="v0 must be non-negative"):
-            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=0.04,
-                       xi=0.3, rho=-0.7, v0=-0.04)
+            HestonModel(S0=100, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=-0.04)
 
 
 class TestHestonMonteCarloEngine:
@@ -142,24 +111,12 @@ class TestHestonMonteCarloEngine:
     def test_pricing_call(self):
         """Test basic call option pricing."""
         model = HestonModel(
-            S0=100.0,
-            r=0.05,
-            T=1.0,
-            kappa=2.0,
-            theta=0.04,
-            xi=0.3,
-            rho=-0.7,
-            v0=0.04,
-            seed=42
+            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04, seed=42
         )
 
         payoff = EuropeanCallPayoff(strike=100.0)
         engine = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=50000,
-            n_steps=100,
-            seed=42
+            model=model, payoff=payoff, n_paths=50000, n_steps=100, seed=42
         )
 
         result = engine.price()
@@ -196,17 +153,13 @@ class TestHestonMonteCarloEngine:
             xi=0.0,  # No volatility of volatility
             rho=0.0,  # No correlation
             v0=theta,  # Start at long-term level
-            seed=42
+            seed=42,
         )
 
         # Price with Heston
         payoff = EuropeanCallPayoff(strike=K)
         engine = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=100000,
-            n_steps=200,
-            seed=42
+            model=model, payoff=payoff, n_paths=100000, n_steps=200, seed=42
         )
         heston_result = engine.price()
 
@@ -226,42 +179,28 @@ class TestHestonMonteCarloEngine:
 
         # Also check that they're reasonably close in absolute terms
         relative_error = abs(error / bs_price_val)
-        assert relative_error < 0.02, (
-            f"Relative error {relative_error:.2%} exceeds 2%"
-        )
+        assert relative_error < 0.02, f"Relative error {relative_error:.2%} exceeds 2%"
 
     def test_pricing_result_attributes(self):
         """Test that pricing result has all required attributes."""
         model = HestonModel(
-            S0=100.0,
-            r=0.05,
-            T=1.0,
-            kappa=2.0,
-            theta=0.04,
-            xi=0.3,
-            rho=-0.7,
-            v0=0.04,
-            seed=42
+            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04, seed=42
         )
 
         payoff = EuropeanCallPayoff(strike=100.0)
         engine = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=10000,
-            n_steps=50,
-            seed=42
+            model=model, payoff=payoff, n_paths=10000, n_steps=50, seed=42
         )
 
         result = engine.price()
 
         # Check all attributes exist
-        assert hasattr(result, 'price')
-        assert hasattr(result, 'stderr')
-        assert hasattr(result, 'ci_lower')
-        assert hasattr(result, 'ci_upper')
-        assert hasattr(result, 'n_paths')
-        assert hasattr(result, 'n_steps')
+        assert hasattr(result, "price")
+        assert hasattr(result, "stderr")
+        assert hasattr(result, "ci_lower")
+        assert hasattr(result, "ci_upper")
+        assert hasattr(result, "n_paths")
+        assert hasattr(result, "n_steps")
 
         # Check types
         assert isinstance(result.price, float)
@@ -274,39 +213,21 @@ class TestHestonMonteCarloEngine:
     def test_antithetic_reduces_variance(self):
         """Test that antithetic variates reduce variance."""
         model = HestonModel(
-            S0=100.0,
-            r=0.05,
-            T=1.0,
-            kappa=2.0,
-            theta=0.04,
-            xi=0.3,
-            rho=-0.7,
-            v0=0.04,
-            seed=42
+            S0=100.0, r=0.05, T=1.0, kappa=2.0, theta=0.04, xi=0.3, rho=-0.7, v0=0.04, seed=42
         )
 
         payoff = EuropeanCallPayoff(strike=100.0)
 
         # Without antithetic
         engine_base = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=10000,
-            n_steps=100,
-            antithetic=False,
-            seed=42
+            model=model, payoff=payoff, n_paths=10000, n_steps=100, antithetic=False, seed=42
         )
         result_base = engine_base.price()
 
         # With antithetic (reset seed)
         model._rng = np.random.default_rng(42)
         engine_anti = HestonMonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=10000,
-            n_steps=100,
-            antithetic=True,
-            seed=42
+            model=model, payoff=payoff, n_paths=10000, n_steps=100, antithetic=True, seed=42
         )
         result_anti = engine_anti.price()
 

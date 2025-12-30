@@ -63,9 +63,7 @@ def run_benchmark():
 
             for seed in seeds:
                 # Create model and payoff
-                model = GeometricBrownianMotion(
-                    S0=S0, r=r, sigma=sigma, T=T, seed=seed
-                )
+                model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
                 payoff = EuropeanCallPayoff(strike=K)
 
                 # Create engine
@@ -75,7 +73,7 @@ def run_benchmark():
                     n_paths=n_paths,
                     antithetic=antithetic,
                     control_variate=control_variate,
-                    seed=seed
+                    seed=seed,
                 )
 
                 # Price the option

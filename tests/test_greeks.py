@@ -30,14 +30,10 @@ class TestPathwiseGreeks:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanCallPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
-        greeks = engine.compute_greeks(option_type='call', method='pw')
+        greeks = engine.compute_greeks(option_type="call", method="pw")
 
         # Check Delta
         assert greeks.delta is not None
@@ -84,14 +80,10 @@ class TestPathwiseGreeks:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanPutPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
-        greeks = engine.compute_greeks(option_type='put', method='pw')
+        greeks = engine.compute_greeks(option_type="put", method="pw")
 
         # Check Delta
         assert greeks.delta is not None
@@ -138,23 +130,15 @@ class TestFiniteDifferenceGreeks:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanCallPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
         # Compute PW Greeks
-        greeks_pw = engine.compute_greeks(option_type='call', method='pw')
+        greeks_pw = engine.compute_greeks(option_type="call", method="pw")
 
         # Compute FD Greeks
         greeks_fd = engine.compute_greeks(
-            option_type='call',
-            method='fd',
-            fd_seeds=10,
-            fd_step_spot=1e-4,
-            fd_step_sigma=1e-4
+            option_type="call", method="fd", fd_seeds=10, fd_step_spot=1e-4, fd_step_sigma=1e-4
         )
 
         # Check Delta agreement
@@ -200,23 +184,15 @@ class TestFiniteDifferenceGreeks:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanPutPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
         # Compute PW Greeks
-        greeks_pw = engine.compute_greeks(option_type='put', method='pw')
+        greeks_pw = engine.compute_greeks(option_type="put", method="pw")
 
         # Compute FD Greeks
         greeks_fd = engine.compute_greeks(
-            option_type='put',
-            method='fd',
-            fd_seeds=10,
-            fd_step_spot=1e-4,
-            fd_step_sigma=1e-4
+            option_type="put", method="fd", fd_seeds=10, fd_step_spot=1e-4, fd_step_sigma=1e-4
         )
 
         # Check Delta agreement
@@ -264,14 +240,10 @@ class TestGreeksEdgeCases:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanCallPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
-        greeks = engine.compute_greeks(option_type='call', method='pw')
+        greeks = engine.compute_greeks(option_type="call", method="pw")
 
         # ITM call should have delta close to 1
         assert greeks.delta.value > 0.7
@@ -293,14 +265,10 @@ class TestGreeksEdgeCases:
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff = EuropeanPutPayoff(strike=K)
         engine = MonteCarloEngine(
-            model=model,
-            payoff=payoff,
-            n_paths=n_paths,
-            control_variate=True,
-            seed=seed
+            model=model, payoff=payoff, n_paths=n_paths, control_variate=True, seed=seed
         )
 
-        greeks = engine.compute_greeks(option_type='put', method='pw')
+        greeks = engine.compute_greeks(option_type="put", method="pw")
 
         # OTM put should have delta close to 0
         assert greeks.delta.value < 0

@@ -33,6 +33,7 @@ class PricingResult:
     control_variate_beta : float | None
         Beta coefficient used in control variate adjustment (None if not used)
     """
+
     price: float
     stderr: float
     ci_lower: float
@@ -61,6 +62,7 @@ class PathDependentPricingResult(PricingResult):
 
     Extends PricingResult with additional metadata specific to path-dependent options.
     """
+
     n_steps: int = 0
     rng_type: str = "pseudo"
     scramble: bool = False
@@ -94,7 +96,7 @@ class MonteCarloEngine:
         n_paths: int,
         antithetic: bool = False,
         control_variate: bool = False,
-        seed: int | None = None
+        seed: int | None = None,
     ):
         """
         Initialize Monte Carlo pricing engine.
@@ -137,10 +139,7 @@ class MonteCarloEngine:
             Pricing results including price, standard error, and confidence interval
         """
         # Simulate terminal asset prices
-        S_T = self.model.simulate_terminal(
-            n_paths=self.n_paths,
-            antithetic=self.antithetic
-        )
+        S_T = self.model.simulate_terminal(n_paths=self.n_paths, antithetic=self.antithetic)
 
         # Compute payoffs
         payoffs = self.payoff(S_T)
@@ -183,7 +182,7 @@ class MonteCarloEngine:
             ci_lower=ci_lower,
             ci_upper=ci_upper,
             n_paths=self.n_paths,
-            control_variate_beta=beta
+            control_variate_beta=beta,
         )
 
     def price_with_details(self) -> tuple[PricingResult, np.ndarray]:
@@ -198,10 +197,7 @@ class MonteCarloEngine:
             Individual discounted payoffs
         """
         # Simulate terminal asset prices
-        S_T = self.model.simulate_terminal(
-            n_paths=self.n_paths,
-            antithetic=self.antithetic
-        )
+        S_T = self.model.simulate_terminal(n_paths=self.n_paths, antithetic=self.antithetic)
 
         # Compute payoffs
         payoffs = self.payoff(S_T)
@@ -244,7 +240,7 @@ class MonteCarloEngine:
             ci_lower=ci_lower,
             ci_upper=ci_upper,
             n_paths=self.n_paths,
-            control_variate_beta=beta
+            control_variate_beta=beta,
         )
 
         return result, discounted_payoffs
@@ -254,7 +250,7 @@ class MonteCarloEngine:
         n_steps: int,
         rng_type: str = "pseudo",
         scramble: bool = False,
-        qmc_dim_override: int | None = None
+        qmc_dim_override: int | None = None,
     ) -> PathDependentPricingResult:
         """
         Price path-dependent options using full path simulation.
@@ -301,9 +297,7 @@ class MonteCarloEngine:
 
             # Simulate full paths
             paths = self.model.simulate_paths(
-                n_paths=self.n_paths,
-                n_steps=n_steps,
-                antithetic=self.antithetic
+                n_paths=self.n_paths, n_steps=n_steps, antithetic=self.antithetic
             )
 
             # Compute payoffs from paths
@@ -334,7 +328,7 @@ class MonteCarloEngine:
                 n_steps=n_steps,
                 rng_type=rng_type,
                 scramble=scramble,
-                control_variate_beta=None
+                control_variate_beta=None,
             )
 
         finally:
@@ -348,7 +342,7 @@ class MonteCarloEngine:
         method: str = "pw",
         fd_seeds: int = 10,
         fd_step_spot: float = 1e-4,
-        fd_step_sigma: float = 1e-4
+        fd_step_sigma: float = 1e-4,
     ) -> GreeksResult:
         """
         Compute option Greeks (Delta and Vega).
@@ -371,19 +365,16 @@ class MonteCarloEngine:
         GreeksResult
             Container with delta and vega estimates
         """
-        if method not in ['pw', 'fd', 'both']:
+        if method not in ["pw", "fd", "both"]:
             raise ValueError(f"method must be 'pw', 'fd', or 'both', got {method}")
 
         delta_result = None
         vega_result = None
 
         # Pathwise Greeks
-        if method in ['pw', 'both']:
+        if method in ["pw", "both"]:
             # Simulate terminal prices
-            S_T = self.model.simulate_terminal(
-                n_paths=self.n_paths,
-                antithetic=self.antithetic
-            )
+            S_T = self.model.simulate_terminal(n_paths=self.n_paths, antithetic=self.antithetic)
 
             # Compute pathwise delta and vega samples
             delta_samples, vega_samples = pathwise_delta_vega(
@@ -393,28 +384,25 @@ class MonteCarloEngine:
                 r=self.model.r,
                 sigma=self.model.sigma,
                 T=self.model.T,
-                option_type=option_type
+                option_type=option_type,
             )
 
             # Summarize samples
             delta_pw = summarize_samples(delta_samples)
             vega_pw = summarize_samples(vega_samples)
 
-            if method == 'pw':
+            if method == "pw":
                 delta_result = delta_pw
                 vega_result = vega_pw
 
         # Finite difference Greeks
-        if method in ['fd', 'both']:
+        if method in ["fd", "both"]:
             # Create engine factory
             def engine_factory(S0_new, sigma_new, seed_new):
                 from mc_pricer.models.gbm import GeometricBrownianMotion
+
                 model_new = GeometricBrownianMotion(
-                    S0=S0_new,
-                    r=self.model.r,
-                    sigma=sigma_new,
-                    T=self.model.T,
-                    seed=seed_new
+                    S0=S0_new, r=self.model.r, sigma=sigma_new, T=self.model.T, seed=seed_new
                 )
                 return MonteCarloEngine(
                     model=model_new,
@@ -422,33 +410,27 @@ class MonteCarloEngine:
                     n_paths=self.n_paths,
                     antithetic=self.antithetic,
                     control_variate=self.control_variate,
-                    seed=seed_new
+                    seed=seed_new,
                 )
 
-            base_params = {
-                'S0': self.model.S0,
-                'sigma': self.model.sigma
-            }
+            base_params = {"S0": self.model.S0, "sigma": self.model.sigma}
 
             # Compute FD Greeks
             delta_fd = finite_diff_delta(
-                engine_factory=engine_factory,
-                base_params=base_params,
-                h_rel=fd_step_spot,
-                seed=123
+                engine_factory=engine_factory, base_params=base_params, h_rel=fd_step_spot, seed=123
             )
 
             vega_fd = finite_diff_vega(
                 engine_factory=engine_factory,
                 base_params=base_params,
                 h_abs=fd_step_sigma,
-                seed=123
+                seed=123,
             )
 
-            if method == 'fd':
+            if method == "fd":
                 delta_result = delta_fd
                 vega_result = vega_fd
-            elif method == 'both':
+            elif method == "both":
                 # For 'both', return PW in main fields and store FD separately
                 # For simplicity, we'll return PW as the primary result
                 delta_result = delta_pw
@@ -458,8 +440,8 @@ class MonteCarloEngine:
             delta=delta_result,
             vega=vega_result,
             method=method,
-            fd_step_spot=fd_step_spot if method in ['fd', 'both'] else None,
-            fd_step_sigma=fd_step_sigma if method in ['fd', 'both'] else None
+            fd_step_spot=fd_step_spot if method in ["fd", "both"] else None,
+            fd_step_sigma=fd_step_sigma if method in ["fd", "both"] else None,
         )
 
     def _get_strike_from_payoff(self) -> float:
@@ -469,13 +451,11 @@ class MonteCarloEngine:
         This is a helper method that attempts to get the strike from common payoff types.
         """
         # Try to get strike from payoff object attributes
-        if hasattr(self.payoff, 'strike'):
+        if hasattr(self.payoff, "strike"):
             return self.payoff.strike
-        elif hasattr(self.payoff, 'K'):
+        elif hasattr(self.payoff, "K"):
             return self.payoff.K
         else:
             raise AttributeError(
-                "Cannot extract strike from payoff. "
-                "Payoff must have 'strike' or 'K' attribute."
+                "Cannot extract strike from payoff. Payoff must have 'strike' or 'K' attribute."
             )
-

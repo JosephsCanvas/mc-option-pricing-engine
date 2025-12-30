@@ -106,12 +106,8 @@ class TestAsianPricing:
         # Pseudo-random
         model_pseudo = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff_pseudo = AsianArithmeticCallPayoff(strike=K)
-        engine_pseudo = MonteCarloEngine(
-            model=model_pseudo, payoff=payoff_pseudo, n_paths=n_paths
-        )
-        result_pseudo = engine_pseudo.price_path_dependent(
-            n_steps=n_steps, rng_type="pseudo"
-        )
+        engine_pseudo = MonteCarloEngine(model=model_pseudo, payoff=payoff_pseudo, n_paths=n_paths)
+        result_pseudo = engine_pseudo.price_path_dependent(n_steps=n_steps, rng_type="pseudo")
 
         # QMC with Sobol
         model_qmc = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
@@ -134,9 +130,7 @@ class TestAsianPricing:
         payoff = AsianArithmeticCallPayoff(strike=K)
         engine = MonteCarloEngine(model=model, payoff=payoff, n_paths=n_paths)
 
-        result = engine.price_path_dependent(
-            n_steps=n_steps, rng_type="sobol", scramble=True
-        )
+        result = engine.price_path_dependent(n_steps=n_steps, rng_type="sobol", scramble=True)
 
         assert result.n_steps == n_steps
         assert result.rng_type == "sobol"

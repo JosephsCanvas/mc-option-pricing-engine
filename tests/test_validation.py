@@ -15,13 +15,16 @@ from .utils.black_scholes import black_scholes_call, black_scholes_put
 class TestBlackScholesValidation:
     """Validate Monte Carlo pricing against Black-Scholes analytical prices."""
 
-    @pytest.mark.parametrize("S0,K,r,sigma,T", [
-        (100, 100, 0.05, 0.2, 1.0),  # ATM
-        (100, 90, 0.05, 0.2, 1.0),   # ITM
-        (100, 110, 0.05, 0.2, 1.0),  # OTM
-        (120, 100, 0.03, 0.25, 0.5), # ITM, shorter maturity
-        (80, 100, 0.02, 0.15, 2.0),  # OTM, longer maturity
-    ])
+    @pytest.mark.parametrize(
+        "S0,K,r,sigma,T",
+        [
+            (100, 100, 0.05, 0.2, 1.0),  # ATM
+            (100, 90, 0.05, 0.2, 1.0),  # ITM
+            (100, 110, 0.05, 0.2, 1.0),  # OTM
+            (120, 100, 0.03, 0.25, 0.5),  # ITM, shorter maturity
+            (80, 100, 0.02, 0.15, 2.0),  # OTM, longer maturity
+        ],
+    )
     def test_call_vs_black_scholes(self, S0, K, r, sigma, T):
         """Test MC call price converges to Black-Scholes price."""
         # Black-Scholes analytical price
@@ -40,13 +43,16 @@ class TestBlackScholesValidation:
         rel_error = np.abs(mc_result.price - bs_price) / bs_price
         assert rel_error < 0.02, f"Relative error {rel_error:.4f} too large"
 
-    @pytest.mark.parametrize("S0,K,r,sigma,T", [
-        (100, 100, 0.05, 0.2, 1.0),  # ATM
-        (100, 110, 0.05, 0.2, 1.0),  # ITM
-        (100, 90, 0.05, 0.2, 1.0),   # OTM
-        (80, 100, 0.03, 0.25, 0.5),  # ITM, shorter maturity
-        (120, 100, 0.02, 0.15, 2.0), # OTM, longer maturity
-    ])
+    @pytest.mark.parametrize(
+        "S0,K,r,sigma,T",
+        [
+            (100, 100, 0.05, 0.2, 1.0),  # ATM
+            (100, 110, 0.05, 0.2, 1.0),  # ITM
+            (100, 90, 0.05, 0.2, 1.0),  # OTM
+            (80, 100, 0.03, 0.25, 0.5),  # ITM, shorter maturity
+            (120, 100, 0.02, 0.15, 2.0),  # OTM, longer maturity
+        ],
+    )
     def test_put_vs_black_scholes(self, S0, K, r, sigma, T):
         """Test MC put price converges to Black-Scholes price."""
         # Black-Scholes analytical price
@@ -122,9 +128,7 @@ class TestAntitheticVarianceReduction:
         # Antithetic MC
         model = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=42)
         payoff = EuropeanCallPayoff(strike=K)
-        engine = MonteCarloEngine(
-            model=model, payoff=payoff, n_paths=200000, antithetic=True
-        )
+        engine = MonteCarloEngine(model=model, payoff=payoff, n_paths=200000, antithetic=True)
         result = engine.price()
 
         # Should still be close to BS price

@@ -31,6 +31,7 @@ class AmericanPricingResult:
     basis : str
         Basis function type used ('poly2' or 'poly3')
     """
+
     price: float
     stderr: float
     ci_lower: float
@@ -85,7 +86,7 @@ def price_american_lsm(
     n_paths: int,
     n_steps: int = 50,
     basis: str = "poly2",
-    seed: int | None = None
+    seed: int | None = None,
 ) -> AmericanPricingResult:
     """
     Price American options using Longstaff-Schwartz (LSM) algorithm.
@@ -126,11 +127,7 @@ def price_american_lsm(
     # Create a new model with the specified seed if provided
     if seed is not None:
         model = GeometricBrownianMotion(
-            S0=model.S0,
-            r=model.r,
-            sigma=model.sigma,
-            T=model.T,
-            seed=seed
+            S0=model.S0, r=model.r, sigma=model.sigma, T=model.T, seed=seed
         )
 
     # Simulate full paths: shape (n_paths, n_steps+1) with S0 at index 0
@@ -209,5 +206,5 @@ def price_american_lsm(
         ci_upper=ci_upper,
         n_paths=n_paths,
         n_steps=n_steps,
-        basis=basis
+        basis=basis,
     )

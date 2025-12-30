@@ -66,11 +66,13 @@ class TestAsianArithmeticCallPayoff:
         payoff = AsianArithmeticCallPayoff(strike=100)
 
         # Three paths with different averages
-        paths = np.array([
-            [100, 110, 120],  # avg=110, payoff=10
-            [100, 90, 80],    # avg=90, payoff=0
-            [100, 105, 110],  # avg=105, payoff=5
-        ])
+        paths = np.array(
+            [
+                [100, 110, 120],  # avg=110, payoff=10
+                [100, 90, 80],  # avg=90, payoff=0
+                [100, 105, 110],  # avg=105, payoff=5
+            ]
+        )
 
         result = payoff(paths)
         expected = np.array([10.0, 0.0, 5.0])
@@ -121,11 +123,13 @@ class TestAsianArithmeticPutPayoff:
         """Test multiple paths simultaneously."""
         payoff = AsianArithmeticPutPayoff(strike=100)
 
-        paths = np.array([
-            [100, 90, 80],    # avg=90, payoff=10
-            [100, 110, 120],  # avg=110, payoff=0
-            [100, 95, 90],    # avg=95, payoff=5
-        ])
+        paths = np.array(
+            [
+                [100, 90, 80],  # avg=90, payoff=10
+                [100, 110, 120],  # avg=110, payoff=0
+                [100, 95, 90],  # avg=95, payoff=5
+            ]
+        )
 
         result = payoff(paths)
         expected = np.array([10.0, 0.0, 5.0])
@@ -186,12 +190,14 @@ class TestUpAndOutCallPayoff:
         """Test multiple paths with mixed outcomes."""
         payoff = UpAndOutCallPayoff(strike=100, barrier=150)
 
-        paths = np.array([
-            [100, 120, 140, 135, 145],  # Not knocked out, terminal=145, payoff=45
-            [100, 130, 150, 140, 135],  # Knocked out, payoff=0
-            [100, 110, 105, 108, 112],  # Not knocked out, terminal=112, payoff=12
-            [100, 145, 149, 151, 148],  # Knocked out at 151, payoff=0
-        ])
+        paths = np.array(
+            [
+                [100, 120, 140, 135, 145],  # Not knocked out, terminal=145, payoff=45
+                [100, 130, 150, 140, 135],  # Knocked out, payoff=0
+                [100, 110, 105, 108, 112],  # Not knocked out, terminal=112, payoff=12
+                [100, 145, 149, 151, 148],  # Knocked out at 151, payoff=0
+            ]
+        )
 
         result = payoff(paths)
         expected = np.array([45.0, 0.0, 12.0, 0.0])
@@ -257,12 +263,14 @@ class TestDownAndOutPutPayoff:
         """Test multiple paths with mixed outcomes."""
         payoff = DownAndOutPutPayoff(strike=100, barrier=50)
 
-        paths = np.array([
-            [100, 80, 60, 65, 70],    # Not knocked out, terminal=70, payoff=30
-            [100, 70, 50, 60, 65],    # Knocked out, payoff=0
-            [100, 90, 85, 82, 80],    # Not knocked out, terminal=80, payoff=20
-            [100, 75, 51, 49, 55],    # Knocked out at 49, payoff=0
-        ])
+        paths = np.array(
+            [
+                [100, 80, 60, 65, 70],  # Not knocked out, terminal=70, payoff=30
+                [100, 70, 50, 60, 65],  # Knocked out, payoff=0
+                [100, 90, 85, 82, 80],  # Not knocked out, terminal=80, payoff=20
+                [100, 75, 51, 49, 55],  # Knocked out at 49, payoff=0
+            ]
+        )
 
         result = payoff(paths)
         expected = np.array([30.0, 0.0, 20.0, 0.0])

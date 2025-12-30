@@ -71,10 +71,7 @@ def main():
     model_vanilla = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
     payoff_vanilla = EuropeanCallPayoff(strike=K)
     engine_vanilla = MonteCarloEngine(
-        model=model_vanilla,
-        payoff=payoff_vanilla,
-        n_paths=n_paths,
-        antithetic=False
+        model=model_vanilla, payoff=payoff_vanilla, n_paths=n_paths, antithetic=False
     )
 
     result_vanilla = engine_vanilla.price()
@@ -98,10 +95,7 @@ def main():
         model_barrier = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
         payoff_barrier = UpAndOutCallPayoff(strike=K, barrier=barrier)
         engine_barrier = MonteCarloEngine(
-            model=model_barrier,
-            payoff=payoff_barrier,
-            n_paths=n_paths,
-            antithetic=False
+            model=model_barrier, payoff=payoff_barrier, n_paths=n_paths, antithetic=False
         )
 
         result_barrier = engine_barrier.price_path_dependent(n_steps=n_steps)
@@ -126,10 +120,7 @@ def main():
     model_detail = GeometricBrownianMotion(S0=S0, r=r, sigma=sigma, T=T, seed=seed)
     payoff_detail = UpAndOutCallPayoff(strike=K, barrier=barrier_detail)
     engine_detail = MonteCarloEngine(
-        model=model_detail,
-        payoff=payoff_detail,
-        n_paths=n_paths,
-        antithetic=False
+        model=model_detail, payoff=payoff_detail, n_paths=n_paths, antithetic=False
     )
 
     result_detail = engine_detail.price_path_dependent(n_steps=n_steps)

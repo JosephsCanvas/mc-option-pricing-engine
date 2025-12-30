@@ -16,7 +16,7 @@ def sample_variance_qe(
     xi: float,
     dt: float,
     z: np.ndarray,
-    psi_c: float = 1.5
+    psi_c: float = 1.5,
 ) -> np.ndarray:
     """
     Sample variance using Andersen's Quadratic-Exponential (QE) scheme.
@@ -77,8 +77,8 @@ def sample_variance_qe(
     # s^2 = v*xi^2*exp(-kappa*dt)*(1-exp(-kappa*dt))/kappa
     #     + theta*xi^2*(1-exp(-kappa*dt))^2/(2*kappa)
     s2 = (
-        v * xi**2 * exp_minus_kappa_dt * one_minus_exp / kappa
-        + theta * xi**2 * one_minus_exp**2 / (2.0 * kappa)
+        v * xi** 2 * exp_minus_kappa_dt * one_minus_exp / kappa
+        + theta * xi** 2 * one_minus_exp** 2 / (2.0 * kappa)
     )
 
     # Compute psi = s^2 / m^2
@@ -87,7 +87,7 @@ def sample_variance_qe(
         s2,
         m**2,
         out=np.full_like(s2, 10.0),  # Use exponential regime when m=0
-        where=m > 1e-12
+        where=m > 1e-12,
     )
 
     # Allocate output array
@@ -103,8 +103,13 @@ def sample_variance_qe(
         # Compute b^2 = 2/psi - 1 + sqrt(2/psi) * sqrt(2/psi - 1)
         two_over_psi = 2.0 / psi_quad
         sqrt_term = np.sqrt(two_over_psi)
-        b_squared = two_over_psi - 1.0 + sqrt_term * np.sqrt(
-            np.maximum(two_over_psi - 1.0, 0.0)  # Ensure non-negative under sqrt
+        b_squared = (
+            two_over_psi
+            - 1.0
+            + sqrt_term
+            * np.sqrt(
+                np.maximum(two_over_psi - 1.0, 0.0)  # Ensure non-negative under sqrt
+            )
         )
 
         # Compute a = m / (1 + b^2)
@@ -112,7 +117,7 @@ def sample_variance_qe(
 
         # v_next = a * (sqrt(b) + z)^2
         b = np.sqrt(b_squared)
-        v_next[quadratic_mask] = np.maximum(a * (b + z_quad)**2, 0.0)
+        v_next[quadratic_mask] = np.maximum(a * (b + z_quad) ** 2, 0.0)
 
     # Exponential regime (psi > psi_c)
     exponential_mask = ~quadratic_mask
@@ -138,13 +143,7 @@ def sample_variance_qe(
         t = 1.0 / (1.0 + 0.2316419 * np.abs(x))
         d = 0.3989423 * np.exp(-x * x / 2.0)
         u = 1.0 - d * t * (
-            0.3193815 + t * (
-                -0.3565638 + t * (
-                    1.781478 + t * (
-                        -1.821256 + t * 1.330274
-                    )
-                )
-            )
+            0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))
         )
         u = np.where(x >= 0, u, 1.0 - u)
 
@@ -152,12 +151,8 @@ def sample_variance_qe(
         # Ensure numerical stability: clip u to avoid log(0)
         u_clipped = np.clip(u, 1e-10, 1.0 - 1e-10)
         v_next[exponential_mask] = np.maximum(
-            np.where(
-                u_clipped <= p,
-                0.0,
-                -np.log((1.0 - p) / (1.0 - u_clipped)) / beta
-            ),
-            0.0  # Final safety net: ensure non-negative
+            np.where(u_clipped <= p, 0.0, -np.log((1.0 - p) / (1.0 - u_clipped)) / beta),
+            0.0,  # Final safety net: ensure non-negative
         )
 
     return v_next
@@ -199,7 +194,7 @@ class HestonModel:
         seed: int | None = None,
         scheme: Literal["full_truncation_euler", "qe"] = "full_truncation_euler",
         rng_type: Literal["pseudo", "sobol"] = "pseudo",
-        scramble: bool = False
+        scramble: bool = False,
     ):
         """
         Initialize Heston model parameters.
@@ -250,10 +245,7 @@ class HestonModel:
         if v0 < 0:
             raise ValueError("Initial variance v0 must be non-negative")
         if scheme not in ("full_truncation_euler", "qe"):
-            raise ValueError(
-                f"Invalid scheme '{scheme}'. "
-                "Must be 'full_truncation_euler' or 'qe'"
-            )
+            raise ValueError(f"Invalid scheme '{scheme}'. Must be 'full_truncation_euler' or 'qe'")
 
         self.S0 = S0
         self.r = r
@@ -272,12 +264,7 @@ class HestonModel:
         self._rng = np.random.default_rng(seed)
         self._seed = seed
 
-    def simulate_paths(
-        self,
-        n_paths: int,
-        n_steps: int,
-        antithetic: bool = False
-    ) -> np.ndarray:
+    def simulate_paths(self, n_paths: int, n_steps: int, antithetic: bool = False) -> np.ndarray:
         """
         Simulate asset price paths using the Heston model.
 
@@ -328,11 +315,7 @@ class HestonModel:
         if self.rng_type == "sobol":
             # Use Sobol sequences for QMC
             # Need 2*n_steps dimensions: first n_steps for z1, last n_steps for z2_indep
-            sobol = SobolGenerator(
-                dimension=2 * n_steps,
-                seed=self._seed,
-                scramble=self.scramble
-            )
+            sobol = SobolGenerator(dimension=2 * n_steps, seed=self._seed, scramble=self.scramble)
             U = sobol.generate(n_base_paths, skip=0)
 
             # If antithetic, extend with 1-U pairing in uniform space
@@ -371,9 +354,10 @@ class HestonModel:
 
                 # Update variance (full truncation)
                 v[:, i + 1] = np.maximum(
-                    v[:, i] + self.kappa * (self.theta - v_plus) * dt
+                    v[:, i]
+                    + self.kappa * (self.theta - v_plus) * dt
                     + self.xi * sqrt_v_plus * sqrt_dt * z2[:, i],
-                    0.0
+                    0.0,
                 )
 
                 # Update asset price
@@ -386,12 +370,7 @@ class HestonModel:
             for i in range(n_steps):
                 # Update variance using QE scheme
                 v[:, i + 1] = sample_variance_qe(
-                    v=v[:, i],
-                    kappa=self.kappa,
-                    theta=self.theta,
-                    xi=self.xi,
-                    dt=dt,
-                    z=z2[:, i]
+                    v=v[:, i], kappa=self.kappa, theta=self.theta, xi=self.xi, dt=dt, z=z2[:, i]
                 )
 
                 # Use current variance for asset price evolution
@@ -406,12 +385,7 @@ class HestonModel:
 
         return s
 
-    def simulate_terminal(
-        self,
-        n_paths: int,
-        n_steps: int,
-        antithetic: bool = False
-    ) -> np.ndarray:
+    def simulate_terminal(self, n_paths: int, n_steps: int, antithetic: bool = False) -> np.ndarray:
         """
         Simulate terminal asset prices using the Heston model.
 

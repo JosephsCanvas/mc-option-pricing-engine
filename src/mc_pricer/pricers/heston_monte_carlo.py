@@ -32,6 +32,7 @@ class HestonPricingResult:
     scheme : str
         Variance discretization scheme used
     """
+
     price: float
     stderr: float
     ci_lower: float
@@ -68,7 +69,7 @@ class HestonMonteCarloEngine:
         n_paths: int = 100000,
         n_steps: int = 200,
         antithetic: bool = False,
-        seed: int | None = None
+        seed: int | None = None,
     ):
         """
         Initialize Heston Monte Carlo pricing engine.
@@ -114,9 +115,7 @@ class HestonMonteCarloEngine:
         The standard error is computed as std(discounted_payoffs) / sqrt(n_paths).
         """
         # Simulate terminal prices
-        terminal_prices = self.model.simulate_terminal(
-            self.n_paths, self.n_steps, self.antithetic
-        )
+        terminal_prices = self.model.simulate_terminal(self.n_paths, self.n_steps, self.antithetic)
 
         # Compute payoffs
         payoffs = self.payoff(terminal_prices)
@@ -141,5 +140,5 @@ class HestonMonteCarloEngine:
             ci_upper=ci_upper,
             n_paths=self.n_paths,
             n_steps=self.n_steps,
-            scheme=self.model.scheme
+            scheme=self.model.scheme,
         )

@@ -85,7 +85,7 @@ def demo_variance_reduction():
             n_paths=n_paths,
             antithetic=antithetic,
             control_variate=control_variate,
-            seed=seed
+            seed=seed,
         )
 
         result = engine.price()
@@ -165,6 +165,7 @@ def demo_put_call_parity():
 
     # Put-call parity: C - P = S0 - K*exp(-rT)
     import numpy as np
+
     parity_lhs = call_price - put_price
     parity_rhs = S0 - K * np.exp(-r * T)
 

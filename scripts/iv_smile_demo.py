@@ -38,8 +38,10 @@ def main():
     print(f"\nParameters: S0={S0}, r={r}, T={T}, option_type={option_type}")
     print(f"Volatility model: σ(K) = {base_vol} + {skew}*(K/S0 - 1) + {curvature}*(K/S0 - 1)²")
     print("\n" + "-" * 100)
-    print(f"{'Strike':<10} {'Moneyness':<12} {'True Vol':<12} "
-          f"{'Market Price':<15} {'Implied Vol':<15} {'Abs Error':<12}")
+    print(
+        f"{'Strike':<10} {'Moneyness':<12} {'True Vol':<12} "
+        f"{'Market Price':<15} {'Implied Vol':<15} {'Abs Error':<12}"
+    )
     print("-" * 100)
 
     results = []
@@ -57,23 +59,21 @@ def main():
         # Recover implied volatility
         try:
             iv = implied_vol(
-                price=market_price,
-                S0=S0,
-                K=K,
-                r=r,
-                T=T,
-                option_type=option_type,
-                tol=1e-8
+                price=market_price, S0=S0, K=K, r=r, T=T, option_type=option_type, tol=1e-8
             )
             error = abs(iv - true_sigma)
             results.append((K, moneyness, true_sigma, market_price, iv, error))
 
-            print(f"{K:<10.1f} {moneyness:<12.4f} {true_sigma:<12.6f} "
-                  f"{market_price:<15.6f} {iv:<15.6f} {error:<12.2e}")
+            print(
+                f"{K:<10.1f} {moneyness:<12.4f} {true_sigma:<12.6f} "
+                f"{market_price:<15.6f} {iv:<15.6f} {error:<12.2e}"
+            )
 
         except ValueError as e:
-            print(f"{K:<10.1f} {moneyness:<12.4f} {true_sigma:<12.6f} "
-                  f"{market_price:<15.6f} {'ERROR':<15} {str(e)}")
+            print(
+                f"{K:<10.1f} {moneyness:<12.4f} {true_sigma:<12.6f} "
+                f"{market_price:<15.6f} {'ERROR':<15} {str(e)}"
+            )
 
     print("-" * 100)
 
@@ -100,12 +100,12 @@ def main():
         implied_vols = [r[4] for r in results]
 
         plt.figure(figsize=(10, 6))
-        plt.plot(strikes_list, true_vols, 'b-o', label='True Volatility', linewidth=2)
-        plt.plot(strikes_list, implied_vols, 'r--s', label='Implied Volatility', linewidth=2)
-        plt.axvline(S0, color='gray', linestyle=':', alpha=0.7, label=f'ATM (S0={S0})')
-        plt.xlabel('Strike Price (K)', fontsize=12)
-        plt.ylabel('Volatility', fontsize=12)
-        plt.title('Volatility Smile: True vs Recovered Implied Volatility', fontsize=14)
+        plt.plot(strikes_list, true_vols, "b-o", label="True Volatility", linewidth=2)
+        plt.plot(strikes_list, implied_vols, "r--s", label="Implied Volatility", linewidth=2)
+        plt.axvline(S0, color="gray", linestyle=":", alpha=0.7, label=f"ATM (S0={S0})")
+        plt.xlabel("Strike Price (K)", fontsize=12)
+        plt.ylabel("Volatility", fontsize=12)
+        plt.title("Volatility Smile: True vs Recovered Implied Volatility", fontsize=14)
         plt.legend(fontsize=10)
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
@@ -114,7 +114,7 @@ def main():
         plots_dir = Path(__file__).parent.parent / "plots"
         plots_dir.mkdir(exist_ok=True)
         output_path = plots_dir / "iv_smile.png"
-        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.savefig(output_path, dpi=150, bbox_inches="tight")
         print(f"\nPlot saved to: {output_path}")
         print("=" * 100)
 

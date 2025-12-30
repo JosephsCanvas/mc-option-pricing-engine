@@ -28,11 +28,7 @@ def get_git_commit() -> str | None:
     """Get current git commit hash if available."""
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            timeout=1,
-            check=False
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=1, check=False
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -42,10 +38,7 @@ def get_git_commit() -> str | None:
 
 
 def create_metadata(
-    config: ExperimentConfig,
-    seed: int,
-    n_paths: int,
-    n_steps: int | None
+    config: ExperimentConfig, seed: int, n_paths: int, n_steps: int | None
 ) -> ExperimentMetadata:
     """Create metadata for reproducibility."""
     return ExperimentMetadata(
@@ -155,7 +148,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         r=config.r,
                         sigma=config.sigma,  # type: ignore
                         T=config.T,
-                        seed=seed
+                        seed=seed,
                     )
 
                     result = price_american_lsm(
@@ -165,7 +158,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         n_paths=n_paths,
                         n_steps=n_steps,  # type: ignore
                         basis=config.lsm_basis,
-                        seed=seed
+                        seed=seed,
                     )
 
                     runtime = time.perf_counter() - start_time
@@ -185,7 +178,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         greeks=None,
                         implied_vol=None,
                         metadata=metadata,
-                        notes=notes
+                        notes=notes,
                     )
 
                 elif config.model == "gbm":
@@ -195,7 +188,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         r=config.r,
                         sigma=config.sigma,  # type: ignore
                         T=config.T,
-                        seed=seed
+                        seed=seed,
                     )
 
                     engine = MonteCarloEngine(
@@ -203,7 +196,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         payoff=payoff,
                         n_paths=n_paths,
                         antithetic=config.antithetic,
-                        control_variate=config.control_variate
+                        control_variate=config.control_variate,
                     )
 
                     result = engine.price()
@@ -213,25 +206,20 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                     greeks_data = None
                     if config.compute_greeks:
                         greeks_result = engine.compute_greeks(
-                            option_type=config.option_type,
-                            method=config.greeks_method
+                            option_type=config.option_type, method=config.greeks_method
                         )
                         delta_val = greeks_result.delta.value if greeks_result.delta else None
                         delta_se = (
-                            greeks_result.delta.standard_error
-                            if greeks_result.delta else None
+                            greeks_result.delta.standard_error if greeks_result.delta else None
                         )
                         vega_val = greeks_result.vega.value if greeks_result.vega else None
-                        vega_se = (
-                            greeks_result.vega.standard_error
-                            if greeks_result.vega else None
-                        )
+                        vega_se = greeks_result.vega.standard_error if greeks_result.vega else None
                         greeks_data = GreeksData(
                             delta=delta_val,
                             delta_stderr=delta_se,
                             vega=vega_val,
                             vega_stderr=vega_se,
-                            method=config.greeks_method
+                            method=config.greeks_method,
                         )
 
                     exp_result = ExperimentResult(
@@ -249,7 +237,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         greeks=greeks_data,
                         implied_vol=None,
                         metadata=metadata,
-                        notes=notes
+                        notes=notes,
                     )
 
                 else:  # heston
@@ -262,7 +250,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         xi=config.xi,  # type: ignore
                         rho=config.rho,  # type: ignore
                         v0=config.v0,  # type: ignore
-                        seed=seed
+                        seed=seed,
                     )
 
                     engine = HestonMonteCarloEngine(
@@ -271,7 +259,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         n_paths=n_paths,
                         n_steps=n_steps,  # type: ignore
                         antithetic=config.antithetic,
-                        seed=seed
+                        seed=seed,
                     )
 
                     result = engine.price()
@@ -292,7 +280,7 @@ def run_experiment(config: ExperimentConfig) -> list[ExperimentResult]:
                         greeks=None,
                         implied_vol=None,
                         metadata=metadata,
-                        notes=notes
+                        notes=notes,
                     )
 
                 results.append(exp_result)

@@ -21,6 +21,7 @@ class GreekResult:
     ci_upper : float
         Upper bound of 95% confidence interval
     """
+
     value: float
     standard_error: float
     ci_lower: float
@@ -54,6 +55,7 @@ class GreeksResult:
     fd_step_sigma : float | None
         Finite difference step size for sigma (if FD used)
     """
+
     delta: GreekResult | None
     vega: GreekResult | None
     method: str
