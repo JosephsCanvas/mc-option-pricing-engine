@@ -54,7 +54,6 @@ Homepage = "https://github.com/JosephsCanvas/mc-option-pricing-engine"
 Documentation = "https://github.com/JosephsCanvas/mc-option-pricing-engine#readme"
 Repository = "https://github.com/JosephsCanvas/mc-option-pricing-engine.git"
 Issues = "https://github.com/JosephsCanvas/mc-option-pricing-engine/issues"
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
