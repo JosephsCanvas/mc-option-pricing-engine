@@ -1,6 +1,6 @@
 # Monte Carlo Option Pricing Engine
 
-[![CI](https://github.com/yourusername/mc-option-pricing-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/mc-option-pricing-engine/actions/workflows/ci.yml)
+[![CI](https://github.com/JosephsCanvas/mc-option-pricing-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/JosephsCanvas/mc-option-pricing-engine/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -60,27 +60,17 @@ mc-option-pricing-engine/
 
 ### Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/yourusername/mc-option-pricing-engine.git
-   cd mc-option-pricing-engine
-   ```
+**From source (development):**
+```bash
+git clone https://github.com/JosephsCanvas/mc-option-pricing-engine.git
+cd mc-option-pricing-engine
+pip install -e ".[dev]"
+```
 
-2. **Create a virtual environment** (recommended):
-   ```bash
-   python -m venv venv
-   
-   # On Windows
-   venv\Scripts\activate
-   
-   # On Unix/macOS
-   source venv/bin/activate
-   ```
-
-3. **Install the package in editable mode with dev dependencies**:
-   ```bash
-   pip install -e ".[dev]"
-   ```
+**Verify installation:**
+```bash
+mc-price --help
+```
 
 ### Quick Demo
 
@@ -122,22 +112,22 @@ ruff check .
 
 Price a European call option:
 ```bash
-python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42
+mc-price --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42
 ```
 
 Price with control variate variance reduction (~62% stderr reduction):
 ```bash
-python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --control_variate
+mc-price --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --control_variate
 ```
 
 Combine antithetic variates and control variates:
 ```bash
-python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --antithetic --control_variate
+mc-price --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --seed 42 --antithetic --control_variate
 ```
 
 Price a European put option:
 ```bash
-python scripts/mc_price.py --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --option_type put
+mc-price --S0 100 --K 100 --r 0.05 --sigma 0.2 --T 1.0 --n_paths 200000 --option_type put
 ```
 
 **Example Output**:

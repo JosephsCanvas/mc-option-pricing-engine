@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Monte Carlo Option Pricing Engine"
+abstract: >-
+  A production-grade Monte Carlo simulation engine for pricing financial
+  derivatives. Features include variance reduction (antithetic variates,
+  control variates), Greeks computation (pathwise, finite difference),
+  American options (LSM), Heston stochastic volatility with QE scheme,
+  quasi-Monte Carlo with Sobol sequences, and path-dependent options
+  (Asian, barrier).
+authors:
+  - family-names: "Butler"
+    given-names: "Joseph"
+repository-code: "https://github.com/JosephsCanvas/mc-option-pricing-engine"
+url: "https://github.com/JosephsCanvas/mc-option-pricing-engine"
+license: MIT
+version: "0.1.0"
+date-released: "2025-12-30"
+keywords:
+  - monte-carlo
+  - option-pricing
+  - derivatives
+  - quantitative-finance
+  - heston-model
+  - black-scholes
+  - greeks
+  - variance-reduction
