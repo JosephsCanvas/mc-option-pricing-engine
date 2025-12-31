@@ -2,6 +2,12 @@
 Payoffs package initialization.
 """
 
+from mc_pricer.payoffs.multi_asset import (
+    BasketArithmeticCallPayoff,
+    BasketArithmeticPutPayoff,
+    SpreadCallPayoff,
+    SpreadPutPayoff,
+)
 from mc_pricer.payoffs.path_dependent import (
     AsianArithmeticCallPayoff,
     AsianArithmeticPutPayoff,
@@ -17,4 +23,8 @@ __all__ = [
     "AsianArithmeticPutPayoff",
     "UpAndOutCallPayoff",
     "DownAndOutPutPayoff",
+    "BasketArithmeticCallPayoff",
+    "BasketArithmeticPutPayoff",
+    "SpreadCallPayoff",
+    "SpreadPutPayoff",
 ]
