@@ -10,7 +10,7 @@ educational and research purposes only.
 """
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 import numpy as np
@@ -166,7 +166,7 @@ def fetch_options_chain(
             ) from e
 
     # Get current timestamp
-    timestamp = datetime.now(UTC).isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
 
     quotes: list[OptionQuote] = []
 
