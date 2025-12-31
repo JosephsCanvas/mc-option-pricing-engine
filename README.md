@@ -1268,6 +1268,125 @@ Combined                       10.450584 ± 0.054721    [10.343332, 10.557836]
 4. **Save raw JSON** for reanalysis without re-running simulations
 5. **Use reference tests** to catch unintended changes
 
+## Market Data Integration (Yahoo Finance)
+
+The `mc-pricer` package includes optional integration with Yahoo Finance for fetching real-time options chain data and computing implied volatilities using the built-in Black-Scholes solver.
+
+### Installation
+
+Install with market data support:
+```bash
+pip install -e ".[marketdata]"
+```
+
+This installs the optional `yfinance` dependency for fetching live options chains.
+
+### Fetch and Analyze Implied Volatility Smile
+
+Use the included script to fetch options data, compute implied volatilities, and analyze the smile:
+
+```bash
+python scripts/market_smile_yahoo.py --ticker SPY --expiry 2026-01-16 --option_type call
+```
+
+**Example Output:**
+```
+====================================================================================================
+OPTION QUOTES WITH IMPLIED VOLATILITIES
+====================================================================================================
+    Strike        Bid        Ask        Mid   IV (Ours)   IV (Yahoo)     Volume         OI
+----------------------------------------------------------------------------------------------------
+    420.00      32.50      33.00      32.75      18.45%      18.52%        250       5000
+    425.00      28.25      28.75      28.50      18.12%      18.18%        180       4200
+    430.00      24.50      25.00      24.75      17.88%      17.95%        320       6500
+    ...
+====================================================================================================
+DIAGNOSTICS
+====================================================================================================
+Underlying spot:      $450.12
+Quotes fetched:       120
+Quotes after filter:  42
+Quotes with IV:       38
+IV range:             15.20% - 22.40%
+IV mean:              18.35%
+ATM IV (nearest):     17.95% at strike $450.00
+IV skew (10% OTM):    +2.45% (put IV - call IV)
+====================================================================================================
+```
+
+### Script Options
+
+```bash
+# Filter by liquidity
+python scripts/market_smile_yahoo.py \
+    --ticker AAPL \
+    --expiry 2026-03-20 \
+    --option_type put \
+    --min_bid 0.10 \
+    --max_rel_spread 0.20 \
+    --min_volume 100 \
+    --min_oi 500
+
+# Calibrate Heston model to the smile
+python scripts/market_smile_yahoo.py \
+    --ticker SPY \
+    --expiry 2026-01-16 \
+    --option_type call \
+    --calibrate_heston \
+    --calib_paths 50000 \
+    --calib_steps 100 \
+    --rng sobol
+```
+
+### Programmatic Usage
+
+```python
+from datetime import datetime
+from mc_pricer.data.yahoo_options import fetch_options_chain, filter_quotes
+from mc_pricer.analytics.market_iv import quote_to_iv, expiry_to_years
+
+# Fetch options chain
+quotes = fetch_options_chain(ticker="SPY", expiry="2026-01-16")
+
+# Filter for liquid options
+filtered = filter_quotes(
+    quotes,
+    min_bid=0.05,
+    max_rel_spread=0.30,
+    min_volume=50
+)
+
+# Compute implied volatilities
+T = expiry_to_years("2026-01-16")
+r = 0.05
+
+for quote in filtered:
+    if quote.option_type == "call":
+        iv = quote_to_iv(quote, r=r, T=T)
+        if iv is not None:
+            print(f"Strike {quote.strike}: IV = {iv*100:.2f}%")
+```
+
+### Important Notes
+
+**Yahoo Finance data is unofficial and provided for educational/research purposes only.**
+
+- Data quality varies; always validate results
+- Filtering by bid-ask spread and volume improves reliability
+- Stale quotes may violate arbitrage bounds (filtered automatically)
+- The `market_iv` module uses our Black-Scholes implied vol solver
+- No network calls are made during package import (lazy loading)
+
+### Testing with Deterministic Data
+
+The test suite uses mocked network calls for reproducibility:
+
+```bash
+pytest tests/test_yahoo_market_iv.py -v
+```
+
+All tests pass without requiring internet access or the `yfinance` package.
+
 ## Development
 
 ### Running Linters
