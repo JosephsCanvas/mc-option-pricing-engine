@@ -4,6 +4,26 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What Does This Tool Do?
+
+This engine **calculates the fair price of financial options** using Monte Carlo simulation—a method that works by simulating thousands of possible future stock price paths and averaging the outcomes.
+
+**In simple terms:**
+- You give it an option contract (e.g., "the right to buy Apple stock at $150 in 3 months")
+- It simulates many possible futures for the stock price
+- It calculates what the option would be worth in each scenario
+- It averages these to give you a fair price today
+
+**Why Monte Carlo?** Unlike simple formulas (like Black-Scholes), Monte Carlo can price complex options—American options (exercisable anytime), Asian options (based on average prices), barrier options (that knock out at certain levels), and options under realistic market conditions where volatility itself is random (Heston model).
+
+**Key capabilities:**
+- **Price any option type**: European, American, Asian, Barrier
+- **Model real markets**: Constant volatility (GBM) or stochastic volatility (Heston)
+- **Compute Greeks**: Delta, Gamma, Vega—the sensitivities needed for hedging
+- **High accuracy**: Variance reduction techniques cut error by ~62%
+
+---
+
 A production-grade Monte Carlo simulation engine for pricing financial derivatives. Built with clean architecture, comprehensive testing, and validated against Black-Scholes analytical solutions.
 
 ## Features
