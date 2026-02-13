@@ -45,9 +45,11 @@ dev = [
     "ruff>=0.1.0",
     "build>=1.0.0",
     "twine>=4.0.0",
+    "pandas>=2.0.0",
 ]
 marketdata = [
     "yfinance>=0.2.0",
+    "pandas>=2.0.0",
 ]
 
 [project.scripts]
